@@ -2,12 +2,13 @@ require "point"
 require "Color"
 require "tetromino"
 require "Cycler"
+require "Flash"
 
 math.randomseed(os.time())
 
 soundVolume = 0.50
 musicVolume = 0.45
-
+flashes = {}
 placePieceSound = love.audio.newSource("place_piece.wav", "static")
 clearLineSound = love.audio.newSource("clear_line.wav", "static")
 clearLinesSound = love.audio.newSource("clear_lines.wav", "static")
@@ -111,13 +112,13 @@ pieceColorPool = { Color(255,255,255,255),
 				   Color(176,196,222,255)
                  }
 				   
-baseTetrominos = {tetromino.new(tetrominoDesigns[1], pieceColorPool[math.ceil(math.random() * #pieceColorPool)]),
-                  tetromino.new(tetrominoDesigns[2], pieceColorPool[math.ceil(math.random() * #pieceColorPool)]),
-				  tetromino.new(tetrominoDesigns[3], pieceColorPool[math.ceil(math.random() * #pieceColorPool)]),
-				  tetromino.new(tetrominoDesigns[4], pieceColorPool[math.ceil(math.random() * #pieceColorPool)]),
-				  tetromino.new(tetrominoDesigns[5], pieceColorPool[math.ceil(math.random() * #pieceColorPool)]),
-				  tetromino.new(tetrominoDesigns[6], pieceColorPool[math.ceil(math.random() * #pieceColorPool)]),
-				  tetromino.new(tetrominoDesigns[7], pieceColorPool[math.ceil(math.random() * #pieceColorPool)]) }
+baseTetrominos = {tetromino.new(tetrominoDesigns[1], pieceColorPool[1]),
+                  tetromino.new(tetrominoDesigns[2], pieceColorPool[2]),
+				  tetromino.new(tetrominoDesigns[3], pieceColorPool[3]),
+				  tetromino.new(tetrominoDesigns[4], pieceColorPool[4]),
+				  tetromino.new(tetrominoDesigns[5], pieceColorPool[5]),
+				  tetromino.new(tetrominoDesigns[6], pieceColorPool[6]),
+				  tetromino.new(tetrominoDesigns[7], pieceColorPool[7]) }
 
 
 function love.load()
@@ -147,7 +148,7 @@ function love.draw()
 		love.graphics.print("Press [Enter] to play", (screenSize.x * 0.5) - (font:getWidth("Press [Enter] to play") * 0.5), (screenSize.y * 0.5) + (font:getHeight("Tetris")))
 		
 	elseif gameStates.curState == gameStates.PLAY then
-	
+
 		love.graphics.setColor(baseTetrominos[gameStates.nextPiece].color.r,
 							   baseTetrominos[gameStates.nextPiece].color.g,
 							   baseTetrominos[gameStates.nextPiece].color.b,
@@ -158,6 +159,7 @@ function love.draw()
 		baseTetrominos[gameStates.nextPiece]:draw(point(374,48))
 		
 		love.graphics.setColor(255,255,255,255)		
+		
 		love.graphics.draw( gameBoard, boardPos.x, boardPos.y,0,1,1,0,0,0,0)
 		love.graphics.draw( placedPieces, boardPos.x + boardZero.x, boardPos.y + boardZero.y,0,1,1,0,0,0,0)
 		curTet:draw(boardPos + boardZero)
@@ -173,6 +175,9 @@ function love.draw()
 		love.graphics.setColor(0,255,0,196)
 		
 		love.graphics.rectangle( "fill", 390, 192,  128 * soundVolume , 16)
+		
+		Flash.drawFlashes()
+	
 		
 	elseif gameStates.curState == gameStates.SCORES then
 		
@@ -485,7 +490,12 @@ function clearLine(line)
 	
 	print("clearLine: " .. tostring(line))
 	
+	--clearingTimer = love.timer.getTime()
+	Flash.new(0.25, Color(255,255,255,255), Color(0,0,0,0))
+	
 	placedData = placedPieces:getData()
+	
+	clearing = true
 	
 	tempImg = love.image.newImageData(placedData:getWidth(), (line * 32))
 	
@@ -541,8 +551,10 @@ function getAllLines()
 		if totalCleared >= 4 then
 			clearLinesSound:clone():play()
 			score = score + (totalCleared * (1000 * (curLevel + 1)))
+			Flash.new(0.35, Color(255,255,0,192), Color(0,255,0,64))
 		else
 			score = score + (totalCleared * (100 * (curLevel + 1)))
+			Flash.new(0.15, Color(0,255,0,128), Color(0,0,255,192))
 		end
 	
 	end
