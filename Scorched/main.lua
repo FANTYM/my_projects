@@ -10,8 +10,11 @@ curKey = "";
 keyRate = 0.02
 keyTimer = love.timer.getTime()
 screenSize = point(love.graphics.getWidth(), love.graphics.getHeight())
+gameSize = point(screenSize.x * 2, screenSize.y)
+viewPos = point(0,0)
 gameStates = { MENU = 0 , PLAY = 1, SCORES = 2, curState = 0 }
-terrain = love.graphics.newImage(love.image.newImageData(screenSize.x, screenSize.y))		  
+terrain = love.graphics.newImage(love.image.newImageData(gameSize.x, gameSize.y))
+sky = love.graphics.newImage(love.image.newImageData(gameSize.x, gameSize.y))
 players = {}
 updateTimer = love.timer.getTime()
 drawTimer = love.timer.getTime()
@@ -58,6 +61,22 @@ colorPool = { Color(255,255,255,255),
             }
 
 function love.load()
+	skyData = sky:getData()
+	
+	function makeSky(x,y,r,g,b,a)
+		
+		vertPerc = ( y / screenSize.y)
+		b = 255 - (127 * vertPerc)
+		g = 128 + ( 127 * (1 - vertPerc))
+		a = 255
+		
+		return r,g,b,a
+		
+	end
+	
+	skyData:mapPixel(makeSky)
+	
+	sky:refresh()
 	
 end
 
@@ -85,7 +104,8 @@ function love.draw()
 
 		love.graphics.setColor(255,255,255,255)		
 	
-		love.graphics.draw( terrain, 0, 0,0,1,1,0,0,0,0)
+		love.graphics.draw( sky, viewPos.x, viewPos.y, 0,1,1,0,0,0,0)
+		love.graphics.draw( terrain, viewPos.x, viewPos.y,0,1,1,0,0,0,0)
 		
 		Flash.drawFlashes()
 		
@@ -136,10 +156,20 @@ function love.update(dt)
 		end
 
 		if keys["left"] and (keyDelta >= (keyRate * 3)) then
+			viewPos.x = viewPos.x + 25
+			if viewPos.x > 0 then
+				viewPos.x = 0
+			end
+			print(viewPos.x)
 			keyTimer = love.timer.getTime()		
 		end
 		
 		if keys["right"] and (keyDelta >= (keyRate * 3))  then
+			viewPos.x = viewPos.x - 25
+			if viewPos.x < -(gameSize.x * 0.5) then
+				viewPos.x = -(gameSize.x * 0.5)
+			end
+			print(viewPos.x)
 			keyTimer = love.timer.getTime()		
 		end
 		
@@ -175,6 +205,26 @@ function love.keyreleased( key )
   
 end
 
+function love.mousepressed( x, y, button )
+	print("Mouse " .. tostring(button) .. " is down")
+	
+end
+
+function love.mousereleased( x, y, button )
+	print("Mouse " .. tostring(button) .. " is up")
+
+end
+
+function love.mousemoved( x, y, dx, dy )
+	--print("Mouse has moved")
+end
+
+function doExplosion(where, radius, power)
+	
+	
+
+end
+
 function generateTerrain()
 	
 	terrainData = terrain:getData()
@@ -190,9 +240,9 @@ function generateTerrain()
 	
 	terrainArray = {}
 	
-	for x = 0, screenSize.x - 1 do
+	for x = 0, gameSize.x - 1 do
 		
-		terrainArray[x] = math.floor(math.random() * (screenSize.y * (0.2 + (math.random() * 0.3))))
+		terrainArray[x] = math.floor(math.random() * (gameSize.y * (0.2 + (math.random() * 0.3))))
 		terrainArray[x] = (terrainArray[x] * 2) + (math.cos(math.rad(x * 100)) * (-15 + (math.random() * 30)))
 		
 		
@@ -207,7 +257,7 @@ function generateTerrain()
 		
 		for p = 0, (math.random() * 5) do
 		
-			for x = 1, screenSize.x - 2 do
+			for x = 1, gameSize.x - 2 do
 					
 				terrainArray[x - 1] = (terrainArray[x] + terrainArray[x + 1]) * 0.5
 			
@@ -215,16 +265,16 @@ function generateTerrain()
 			
 		end 
 		
-		for x = 0, screenSize.x - 1 do
+		for x = 0, gameSize.x - 1 do
 			
 			prevX = x - 1
 			nextX = x + 1
 			if prevX < 0 then
-				prevX = prevX + screenSize.x 
+				prevX = prevX + gameSize.x 
 			end
 			
-			if nextX > screenSize.x - 1 then
-				nextX = nextX - screenSize.x 
+			if nextX > gameSize.x - 1 then
+				nextX = nextX - gameSize.x 
 			end
 			
 			terrainArray[x] = (terrainArray[prevX] + terrainArray[x] + terrainArray[nextX]) / 3.001
@@ -235,19 +285,21 @@ function generateTerrain()
 	
 	function pix_func(x,y,r,g,b,a)
 		newPerc = 0
-		if y > screenSize.y - terrainArray[x] then
-			finPerc = (screenSize.y - y) / terrainArray[x]
+		if y > gameSize.y - terrainArray[x] then
+			finPerc = (gameSize.y - y) / terrainArray[x]
 			finPerc = (finPerc + (math.random() * (finPerc * 0.2))) * 0.5
 			if finPerc > 0.5 then
 				newPerc = (newPerc + (finPerc - 0.5) / 0.5) * 0.5
 				g = 128 + (127 * (newPerc))
 				r = 64 * (1 - newPerc)
-				a = 255 - (196 * newPerc)
+				a = 255
 			else
 				g = 128 * finPerc
 				r = 196 * finPerc
-				a = 128
+				a = 255
 			end
+		else	
+			a=0
 		end
 		
 		return r,g,b,a
