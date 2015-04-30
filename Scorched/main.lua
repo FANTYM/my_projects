@@ -2,6 +2,7 @@ require "point"
 require "Color"
 require "Cycler"
 require "Flash"
+require "tweenVal"
 
 math.randomseed(os.time())
 
@@ -11,6 +12,9 @@ keyRate = 0.02
 keyTimer = love.timer.getTime()
 screenSize = point(love.graphics.getWidth(), love.graphics.getHeight())
 gameSize = point(screenSize.x * 2, screenSize.y)
+
+screenTween = tweenVal(0, -screenSize.x, 4)
+
 viewPos = point(0,0)
 gameStates = { MENU = 0 , PLAY = 1, SCORES = 2, curState = 0 }
 terrain = love.graphics.newImage(love.image.newImageData(gameSize.x, gameSize.y))
@@ -22,6 +26,7 @@ fpsTimer = love.timer.getTime()
 fpsCount = 0
 curFPS = 0
 avgFPS = 0
+
 
 colorPool = { Color(255,255,255,255),
   		      Color(255,  0,  0,255),
@@ -103,7 +108,7 @@ function love.draw()
 	elseif gameStates.curState == gameStates.PLAY then
 
 		love.graphics.setColor(255,255,255,255)		
-	
+		viewPos.x = screenTween()
 		love.graphics.draw( sky, viewPos.x, viewPos.y, 0,1,1,0,0,0,0)
 		love.graphics.draw( terrain, viewPos.x, viewPos.y,0,1,1,0,0,0,0)
 		
@@ -136,6 +141,7 @@ function love.update(dt)
 	
 		if keys["return"] and utDelta > 0.5 then
 			generateTerrain()
+			screenTween = tweenVal(0, -screenSize.x, 4)
 			gameStates.curState = gameStates.PLAY
 		end
 	
