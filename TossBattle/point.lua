@@ -63,14 +63,40 @@ end
 
 function point:dist(p2)
 
-	return math.sqrt(((p2.x - self.x)^2) + ((p2.y - self.y)^2))
+	return math.sqrt( (p2.x - (self.x * self.x)) + (p2.y - (self.y * self.y)))
 
 end
 
-function point:withinRadius(p2, dist)
+function point:length()
+	
+	return math.sqrt( ((self.x * self.x)) + ((self.y * self.y)))
+
+end
+
+function point:closerThan(p2, dist)
 
 	local checkDist = dist * dist
 	return  not (checkDist < (((p2.x - self.x)^2) + ((p2.y - self.y)^2)))
+
+end
+
+function point:normalize()
+	
+	local curLen = self:length()
+	if curLen <=0 then
+		return point(0,0)
+	end
+	
+	self.x = self.x / curLen
+	self.y = self.y / curLen
+	
+	return self
+	
+end
+
+function point:dot(p2)
+
+	return (self.x * p2.x) + (self.y * p2.y)
 
 end
 
@@ -81,8 +107,6 @@ function point:rotate(angle, aroundPoint)
 	sine = math.sin(math.rad(angle))
 	cosine = math.cos(math.rad(angle))
 
-	--var rotatedX = Math.cos(angle) * (point.x - center.x) - Math.sin(angle) * (point.y-center.y) + center.x;
-    --var rotatedY = Math.sin(angle) * (point.x - center.x) + Math.cos(angle) * (point.y - center.y) + center.y;
 	newPoint = point(cosine * (self.x - aroundPoint.x) -   sine * (self.y - aroundPoint.y) + aroundPoint.x, 
 					   sine * (self.x - aroundPoint.x) + cosine * (self.y - aroundPoint.y) + aroundPoint.y)
 
