@@ -27,7 +27,7 @@ function ents.mt:resolveCollision(ent2)
     local a1 = self.vel.dot(normal)
     local a2 = ent2.vel.dot(normal)
     local p = (2 * (a1 - a2)) / (self.mass + ent2.mass)
-    local v1 = ent1.vel:copy()
+    local v1 = self.vel:copy()
         
 	v1.x = v1.x - p * ent2.mass * normal.x
     v1.y = v1.y - p * ent2.mass * normal.y
@@ -40,9 +40,9 @@ function ents.mt:resolveCollision(ent2)
 
     local pushVec1 = self.pos - ent2.pos
     local pushVec2 = ent2.pos - self.pos
-    local penDist = -self.getPenDist(ent1, ent2)
+    local penDist = -self.getPenDist(ent2)
         
-    ent1.pos = ent1.pos + ((pushVec1 * penDist) * self.timeDelta)
+    self.pos = self.pos + ((pushVec1 * penDist) * self.timeDelta)
     ent2.pos = ent2.pos + ((pushVec2 * penDist) * self.timeDelta)
 
 

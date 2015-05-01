@@ -12,27 +12,37 @@ function tweenVal.mt:__call( nStartVal, nEndVal, nTimeToArrive )
 	tv.percent = 0
 	tv.startVal = nStartVal
 	tv.endVal = nEndVal
-	tv.curVal = (tv.startVal * (1 - tv.percent)) + (tv.endVal * (tv.percent))
+	tv.curVal = 0 --(tv.startVal * (1 - tv.percent)) + (tv.endVal * (tv.percent))
 	tv.isDone = false
+	tv:update()
 	
 	return tv
 
 end
 
-function tweenVal:__call()
-	print(self)
+function tweenVal:__call( nStart, nEnd, nTime)
+	--print(self)
+	if not (nStart == nil) then
+		self.startVal = nStart
+		self.endVal = nEnd
+		self.TTL = nTime
+		self.created = love.timer.getTime()
+		self.isDone = false
+	end
 	self:update()
+	--print(self)
 	return self.curVal
+
+end
+
+function tweenVal:timeLeft()
+	
+	return self.TTL - (love.timer.getTime() - self.created)
 
 end
 
 function tweenVal:update()
 	
-	--print( love.timer.getTime())
-	--print( self.created)
-	--print(self.TTL)
-	--print((love.timer.getTime() - self.created))
-	--print(((love.timer.getTime() - self.created) / self.TTL))
 	self.percent = self.clamp( ((love.timer.getTime() - self.created) / self.TTL) , 0 , 1 )
 	
 	if self.percent == 1 then self.isDone = true end

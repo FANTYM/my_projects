@@ -6,18 +6,21 @@ require "tweenVal"
 
 math.randomseed(os.time())
 
+titleFont = love.graphics.newFont("differentiator.ttf", 20)
+gameFont = love.graphics.newFont("differentiator.ttf", 10)
 gameTitle = "Toss Battle"
 keys = {}
 curKey = "";
+moveRate = 0
 keyRate = 0.02
 keyTimer = love.timer.getTime()
 screenSize = point(love.graphics.getWidth(), love.graphics.getHeight())
 gameSize = point(screenSize.x * 2, screenSize.y)
 
-screenTween = tweenVal(0, -screenSize.x, 4)
+screenTween = tweenVal(0, 0, 0)
 
-viewPos = point(0,0)
-gameStates = { MENU = 0 , PLAY = 1, SCORES = 2, curState = 0 }
+--viewPos = point(0,0)
+gameStates = { MENU = 0 , PLAY = 1, SCORES = 2, TERRAIN=3, curState = 0 }
 terrain = love.graphics.newImage(love.image.newImageData(gameSize.x, gameSize.y))
 sky = love.graphics.newImage(love.image.newImageData(gameSize.x, gameSize.y))
 players = {}
@@ -101,17 +104,26 @@ function love.draw()
 	
 	if gameStates.curState == gameStates.MENU then
 		
-		font = love.graphics.getFont()
+		--font = love.graphics.getFont()
+		love.graphics.setFont(titleFont)
 		love.graphics.setColor(255,255,255,255)
-		love.graphics.print(gameTitle, (screenSize.x * 0.5) - (font:getWidth(gameTitle) * 0.5), (screenSize.y * 0.5) - (font:getHeight(gameTitle)))
-		love.graphics.print("Press [Enter] to play", (screenSize.x * 0.5) - (font:getWidth("Press [Enter] to play") * 0.5), (screenSize.y * 0.5) + (font:getHeight(gameTitle)))
+		love.graphics.print(gameTitle, (screenSize.x * 0.5) - (titleFont:getWidth(gameTitle) * 0.5), (screenSize.y * 0.5) - (titleFont:getHeight(gameTitle)))
+		love.graphics.print("Press [Enter] to play", (screenSize.x * 0.5) - (titleFont:getWidth("Press [Enter] to play") * 0.5), (screenSize.y * 0.5) + (titleFont:getHeight(gameTitle)))
 		
+	elseif gameStates.curState == gameStates.TERRAIN then
+		
+		local terrainText = "Generating Terrain"
+		love.graphics.setFont(titleFont)
+		love.graphics.setColor(255,255,255,255)
+		love.graphics.print(terrainText, (screenSize.x * 0.5) - (titleFont:getWidth(terrainText) * 0.5), (screenSize.y * 0.5) - ((titleFont:getHeight(terrainText) * 2)))
+		love.graphics.print("-..Please Wait..-", (screenSize.x * 0.5) - (titleFont:getWidth("-..Please Wait..-") * 0.5), (screenSize.y * 0.5) + (titleFont:getHeight(terrainText)))
+	
 	elseif gameStates.curState == gameStates.PLAY then
-
+	
 		love.graphics.setColor(255,255,255,255)		
-		viewPos.x = screenTween()
-		love.graphics.draw( sky, viewPos.x, viewPos.y, 0,1,1,0,0,0,0)
-		love.graphics.draw( terrain, viewPos.x, viewPos.y,0,1,1,0,0,0,0)
+		
+		love.graphics.draw( sky, screenTween(), 0, 0,1,1,0,0,0,0)
+		love.graphics.draw( terrain, screenTween(), 0,0,1,1,0,0,0,0)
 		
 		Flash.drawFlashes()
 		
@@ -141,11 +153,14 @@ function love.update(dt)
 	if gameStates.curState == gameStates.MENU then
 	
 		if keys["return"] and utDelta > 0.5 then
-			generateTerrain()
-			screenTween = tweenVal(0, -screenSize.x, 4)
-			gameStates.curState = gameStates.PLAY
+			gameStates.curState = gameStates.TERRAIN
+			
 		end
 	
+	elseif gameStates.curState == gameStates.TERRAIN then
+		generateTerrain()
+		--screenTween = tweenVal(0, -screenSize.x, 1)
+		gameStates.curState = gameStates.PLAY
 	elseif gameStates.curState == gameStates.PLAY then
 
 		
@@ -163,21 +178,28 @@ function love.update(dt)
 		end
 
 		if keys["left"] and (keyDelta >= (keyRate * 3)) then
-			viewPos.x = viewPos.x + 25
-			if viewPos.x > 0 then
-				viewPos.x = 0
+			moveRate = (moveRate + 25)
+			if (screenTween() + moveRate) > 0 then
+				screenTween(screenTween(),0,1)
+			else
+				screenTween(screenTween(), screenTween() + moveRate, 1)
 			end
-			print(viewPos.x)
-			keyTimer = love.timer.getTime()		
+			--print(viewPos.x)
+			keyTimer = love.timer.getTime()
+		else
+			moveRate = moveRate  * 0.999
 		end
 		
 		if keys["right"] and (keyDelta >= (keyRate * 3))  then
-			viewPos.x = viewPos.x - 25
-			if viewPos.x < -(gameSize.x * 0.5) then
-				viewPos.x = -(gameSize.x * 0.5)
+			moveRate = (moveRate + 25)
+			if (screenTween() - moveRate) < -(screenSize.x) then
+				screenTween(screenTween(),-(screenSize.x),1)
+			else
+				screenTween(screenTween(), screenTween() - moveRate, 1)
 			end
-			print(viewPos.x)
 			keyTimer = love.timer.getTime()		
+		else
+			moveRate = moveRate  * 0.999
 		end
 		
 		if keys["up"] and (keyDelta >= (keyRate * 4)) then
@@ -260,7 +282,7 @@ function generateTerrain()
 	
 	
 	
-	for s = 0, 100 + (math.random() * 100) do
+	for s = 0, 50 + (math.random() * 50) do
 		
 		for p = 0, (math.random() * 5) do
 		
