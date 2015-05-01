@@ -6,6 +6,7 @@ require "tweenVal"
 
 math.randomseed(os.time())
 
+gameTitle = "Toss Battle"
 keys = {}
 curKey = "";
 keyRate = 0.02
@@ -102,8 +103,8 @@ function love.draw()
 		
 		font = love.graphics.getFont()
 		love.graphics.setColor(255,255,255,255)
-		love.graphics.print("Scorched Earth", (screenSize.x * 0.5) - (font:getWidth("Scorched Earth") * 0.5), (screenSize.y * 0.5) - (font:getHeight("Scorched Earth")))
-		love.graphics.print("Press [Enter] to play", (screenSize.x * 0.5) - (font:getWidth("Press [Enter] to play") * 0.5), (screenSize.y * 0.5) + (font:getHeight("Scorched Earth")))
+		love.graphics.print(gameTitle, (screenSize.x * 0.5) - (font:getWidth(gameTitle) * 0.5), (screenSize.y * 0.5) - (font:getHeight(gameTitle)))
+		love.graphics.print("Press [Enter] to play", (screenSize.x * 0.5) - (font:getWidth("Press [Enter] to play") * 0.5), (screenSize.y * 0.5) + (font:getHeight(gameTitle)))
 		
 	elseif gameStates.curState == gameStates.PLAY then
 
