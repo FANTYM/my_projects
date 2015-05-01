@@ -3,7 +3,7 @@ function love.conf(t)
     t.version = "0.9.1"                -- The LÖVE version this game was made for (string)
     t.console = true                  -- Attach a console (boolean, Windows only)
 
-    t.window.title = "Tetris"        -- The window title (string)
+    t.window.title = "Block Aligner v1.0"        -- The window title (string)
     t.window.icon = nil                -- Filepath to an image to use as the window's icon (string)
     t.window.width = 554               -- The window width (number)
     t.window.height = 672              -- The window height (number)

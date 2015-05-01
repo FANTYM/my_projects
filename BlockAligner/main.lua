@@ -1,6 +1,6 @@
 require "point"
 require "Color"
-require "tetromino"
+require "block"
 require "Cycler"
 require "Flash"
 
@@ -53,7 +53,7 @@ screenSize = point(love.graphics.getWidth(), love.graphics.getHeight())
 
 
 keys = {}
-tetrominoDesigns = { 
+blockDesigns = { 
 					  {{0,1,0},
                        {1,1,1}}, 
 					  
@@ -112,13 +112,13 @@ pieceColorPool = { Color(255,255,255,255),
 				   Color(176,196,222,255)
                  }
 				   
-baseTetrominos = {tetromino.new(tetrominoDesigns[1], pieceColorPool[1]),
-                  tetromino.new(tetrominoDesigns[2], pieceColorPool[2]),
-				  tetromino.new(tetrominoDesigns[3], pieceColorPool[3]),
-				  tetromino.new(tetrominoDesigns[4], pieceColorPool[4]),
-				  tetromino.new(tetrominoDesigns[5], pieceColorPool[5]),
-				  tetromino.new(tetrominoDesigns[6], pieceColorPool[6]),
-				  tetromino.new(tetrominoDesigns[7], pieceColorPool[7]) }
+baseBlocks = {block.new(blockDesigns[1], pieceColorPool[1]),
+                  block.new(blockDesigns[2], pieceColorPool[2]),
+				  block.new(blockDesigns[3], pieceColorPool[3]),
+				  block.new(blockDesigns[4], pieceColorPool[4]),
+				  block.new(blockDesigns[5], pieceColorPool[5]),
+				  block.new(blockDesigns[6], pieceColorPool[6]),
+				  block.new(blockDesigns[7], pieceColorPool[7]) }
 
 
 function love.load()
@@ -144,25 +144,25 @@ function love.draw()
 		font = love.graphics.getFont()
 		
 		love.graphics.setColor(255,255,255,255)
-		love.graphics.print("Tetris", (screenSize.x * 0.5) - (font:getWidth("Tetris") * 0.5), (screenSize.y * 0.5) - (font:getHeight("Tetris")))
-		love.graphics.print("Press [Enter] to play", (screenSize.x * 0.5) - (font:getWidth("Press [Enter] to play") * 0.5), (screenSize.y * 0.5) + (font:getHeight("Tetris")))
+		love.graphics.print("Block Aligner", (screenSize.x * 0.5) - (font:getWidth("Block Aligner") * 0.5), (screenSize.y * 0.5) - (font:getHeight("Block Aligner")))
+		love.graphics.print("Press [Enter] to play", (screenSize.x * 0.5) - (font:getWidth("Press [Enter] to play") * 0.5), (screenSize.y * 0.5) + (font:getHeight("Block Aligner")))
 		
 	elseif gameStates.curState == gameStates.PLAY then
 
-		love.graphics.setColor(baseTetrominos[gameStates.nextPiece].color.r,
-							   baseTetrominos[gameStates.nextPiece].color.g,
-							   baseTetrominos[gameStates.nextPiece].color.b,
+		love.graphics.setColor(baseBlocks[gameStates.nextPiece].color.r,
+							   baseBlocks[gameStates.nextPiece].color.g,
+							   baseBlocks[gameStates.nextPiece].color.b,
 							   196)
-		love.graphics.rectangle( "line", 390, 64, baseTetrominos[gameStates.nextPiece]:getWidth() + 32, baseTetrominos[gameStates.nextPiece]:getHeight() + 32)
+		love.graphics.rectangle( "line", 390, 64, baseBlocks[gameStates.nextPiece]:getWidth() + 32, baseBlocks[gameStates.nextPiece]:getHeight() + 32)
 		
 		love.graphics.setColor(255,255,255,128 + (nextPieceCycler:getValue() * 127))
-		baseTetrominos[gameStates.nextPiece]:draw(point(374,48))
+		baseBlocks[gameStates.nextPiece]:draw(point(374,48))
 		
 		love.graphics.setColor(255,255,255,255)		
 		
 		love.graphics.draw( gameBoard, boardPos.x, boardPos.y,0,1,1,0,0,0,0)
 		love.graphics.draw( placedPieces, boardPos.x + boardZero.x, boardPos.y + boardZero.y,0,1,1,0,0,0,0)
-		curTet:draw(boardPos + boardZero)
+		curBlock:draw(boardPos + boardZero)
 		
 		love.graphics.setColor(0,255,255,255)
 		love.graphics.print("Score: " .. tostring(score), 390, 0)
@@ -232,11 +232,11 @@ function love.update(dt)
 		
 		if utDelta > 1 - (curLevel / maxLevel) then
 			
-			curTet.pos.y = curTet.pos.y + 1
+			curBlock.pos.y = curBlock.pos.y + 1
 			
-			if not canPlace(curTet) then
-				curTet.pos.y = curTet.pos.y - 1
-				placePiece(curTet)
+			if not canPlace(curBlock) then
+				curBlock.pos.y = curBlock.pos.y - 1
+				placePiece(curBlock)
 				
 			end
 			updateTimer = curTime
@@ -264,40 +264,40 @@ function love.update(dt)
 		end
 		
 		if keys[" "] and (keyDelta >= keyRate) then
-			curTet.pos.y = curTet.pos.y + 1
-			if not canPlace(curTet) then
-				curTet.pos.y = curTet.pos.y - 1
-				placePiece(curTet)
+			curBlock.pos.y = curBlock.pos.y + 1
+			if not canPlace(curBlock) then
+				curBlock.pos.y = curBlock.pos.y - 1
+				placePiece(curBlock)
 				
 			end
 			keyTimer = love.timer.getTime()		
 		end
 
 		if keys["left"] and (keyDelta >= (keyRate * 3)) then
-			curTet.pos.x = curTet.pos.x - 1
-			if not canPlace(curTet) then
-				curTet.pos.x = curTet.pos.x + 1
+			curBlock.pos.x = curBlock.pos.x - 1
+			if not canPlace(curBlock) then
+				curBlock.pos.x = curBlock.pos.x + 1
 			end
 			keyTimer = love.timer.getTime()		
 		end
 		
 		if keys["right"] and (keyDelta >= (keyRate * 3))  then
-			curTet.pos.x = curTet.pos.x + 1
-			if not canPlace(curTet) then
-				curTet.pos.x = curTet.pos.x - 1
+			curBlock.pos.x = curBlock.pos.x + 1
+			if not canPlace(curBlock) then
+				curBlock.pos.x = curBlock.pos.x - 1
 			end
 			keyTimer = love.timer.getTime()		
 		end
 		
 		if keys["up"] and (keyDelta >= (keyRate * 4)) then
-			curTet.angle = curTet.angle - 90
-			if curTet.angle < 0 then
-				curTet.angle = curTet.angle + 360 
+			curBlock.angle = curBlock.angle - 90
+			if curBlock.angle < 0 then
+				curBlock.angle = curBlock.angle + 360 
 			end
-			if not canPlace(curTet) then
-				curTet.angle = curTet.angle + 90
-				if curTet.angle > 360 then
-					curTet.angle = curTet.angle - 360 
+			if not canPlace(curBlock) then
+				curBlock.angle = curBlock.angle + 90
+				if curBlock.angle > 360 then
+					curBlock.angle = curBlock.angle - 360 
 				end
 			else
 				flipPieceSound:clone():play()
@@ -306,14 +306,14 @@ function love.update(dt)
 		end
 		
 		if keys["down"] and (keyDelta >= (keyRate * 4))  then
-			curTet.angle = curTet.angle + 90
-			if curTet.angle > 360 then
-				curTet.angle = curTet.angle - 360 
+			curBlock.angle = curBlock.angle + 90
+			if curBlock.angle > 360 then
+				curBlock.angle = curBlock.angle - 360 
 			end
-			if not canPlace(curTet) then
-				curTet.angle = curTet.angle - 90
-				if curTet.angle < 0 then
-					curTet.angle = curTet.angle + 360 
+			if not canPlace(curBlock) then
+				curBlock.angle = curBlock.angle - 90
+				if curBlock.angle < 0 then
+					curBlock.angle = curBlock.angle + 360 
 				end
 			else
 				flipPieceSound:clone():play()
@@ -377,9 +377,9 @@ end
 
 function spawnNextPiece()
 	
-	curTet = baseTetrominos[gameStates.nextPiece]:clone()
-	curTet.pos = point(math.ceil(#board[#board] * 0.5) - #curTet.design[#curTet.design], -2)
-	if not canPlace(curTet) then
+	curBlock = baseBlocks[gameStates.nextPiece]:clone()
+	curBlock.pos = point(math.ceil(#board[#board] * 0.5) - #curBlock.design[#curBlock.design], -2)
+	if not canPlace(curBlock) then
 		gameStates.curState = gameStates.SCORES
 		loseSound:clone():play()
 	end
@@ -412,7 +412,7 @@ function placePiece(piece)
 	if linesCleared >= 10 then
 		curLevel = curLevel + 1
 		levelUpSound:clone():play()
-		reColorBaseTets()
+		reColorBaseBlocks()
 		if curLevel > maxLevel then curLevel = maxLevel end
 		linesCleared = linesCleared - 10
 	end
@@ -421,13 +421,12 @@ function placePiece(piece)
 
 end
 
-function reColorBaseTets()
+function reColorBaseBlocks()
 	
-	rndTet = 0
 	haveNum = true
 	colors = {math.ceil(math.random() * #pieceColorPool)}
 	
-	for n = 1, #baseTetrominos do
+	for n = 1, #baseBlocks do
 		rndNum = math.ceil(math.random() * #pieceColorPool)
 		while valueInTable(colors,rndNum) do
 			rndNum = math.ceil(math.random() * #pieceColorPool)
@@ -435,12 +434,12 @@ function reColorBaseTets()
 		colors[#colors + 1] = rndNum
 	end
 	
-	for i = 1, #baseTetrominos do
+	for i = 1, #baseBlocks do
 		
 		rndNum = math.ceil(math.random() * #colors)
-		baseTetrominos[i].color = pieceColorPool[colors[rndNum]]--baseTetrominos[rndTet].color
+		baseBlocks[i].color = pieceColorPool[colors[rndNum]]
 		table.remove(colors, rndNum)
-		baseTetrominos[i]:createImage()
+		baseBlocks[i]:createImage()
 		
 	end
 	
@@ -625,4 +624,5 @@ function clamp(inNum, minNum, maxNum)
 	return retNum
 	
 end
-reColorBaseTets()
+
+reColorBaseBlocks()

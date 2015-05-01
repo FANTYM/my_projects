@@ -1,78 +1,75 @@
 require "point"
 
-tetromino = {}
-tetromino.__index = tetromino
-tetromino.pieceImage = love.graphics.newImage("tetromino_single.png"):getData()
+block = {}
+block.__index = block
+block.pieceImage = love.graphics.newImage("block_single.png"):getData()
 
-function tetromino.new(design, clr) 
+function block.new(design, clr) 
 	
-	local tetri = {}
-	setmetatable(tetri, tetromino)
-	tetri.design = design
-	tetri.color = clr
-	tetri.pos = point(0,0)
-	tetri.img = nil
-	tetri.angle = 0
-	tetri:createImage()
-	tetri.shouldDelete = false
+	local nBlock = {}
+	setmetatable(nBlock, block)
+	nBlock.design = design
+	nBlock.color = clr
+	nBlock.pos = point(0,0)
+	nBlock.img = nil
+	nBlock.angle = 0
+	nBlock:createImage()
+	nBlock.shouldDelete = false
 	
-	return tetri
+	return nBlock
 
 end
 
-function tetromino:getWidth()
+function block:getWidth()
 	
-	return #self.design[#self.design] * tetromino.pieceImage:getWidth() 
+	return #self.design[#self.design] * block.pieceImage:getWidth() 
 
 end
 
-function tetromino:getHeight()
+function block:getHeight()
 	
-	return #self.design * tetromino.pieceImage:getHeight() 
+	return #self.design * block.pieceImage:getHeight() 
 
 end
 
-function tetromino:clone()
+function block:clone()
 	
-	local tCopy = {}
-	setmetatable(tCopy, tetromino)
-	tCopy.design = {}
+	local bCopy = {}
+	setmetatable(bCopy, block)
+	bCopy.design = {}
 	for y = 1, #self.design do
-		tCopy.design[y] = {}
+		bCopy.design[y] = {}
 		for x = 1, #self.design[#self.design] do
-			tCopy.design[y][x] = self.design[y][x]
+			bCopy.design[y][x] = self.design[y][x]
 		end
 	end
-	tCopy.color = self.color:copy()
-	tCopy.pos = point(0,0)
-	--tCopy.img = self.img
-	tCopy:createImage()
-	tCopy.angle = tonumber(self.angle)
-	tCopy.shouldDelete = false
+	bCopy.color = self.color:copy()
+	bCopy.pos = point(0,0)
+	bCopy:createImage()
+	bCopy.angle = tonumber(self.angle)
+	bCopy.shouldDelete = false
 	
-	return tCopy
+	return bCopy
 	
 end
 
-function tetromino:createImage()
+function block:createImage()
 
-	imgWidth = tetromino.pieceImage:getWidth() 
-	imgHeight = tetromino.pieceImage:getHeight() 
+	imgWidth = block.pieceImage:getWidth() 
+	imgHeight = block.pieceImage:getHeight() 
 	
 	imgData = love.image.newImageData( imgWidth , imgHeight)
-	imgData:paste(tetromino.pieceImage,0,0,0,0,imgWidth, imgHeight)
+	imgData:paste(block.pieceImage,0,0,0,0,imgWidth, imgHeight)
 	
 	function pixelFunction(x, y, r, g, b, a)
 		
 		pixelLen = math.sqrt( (r * r) + (g * g) + (g * g) )
-		--print(pixelLen)
-		--luminance = 1 - (0.299 * r + 0.587 * g + 0.114 * b)
 		
 		luminanceR = r / pixelLen
 		luminanceG = g / pixelLen
 		luminanceB = b / pixelLen
 	
-		luminance = pixelLen / 255 --(luminanceR + luminanceG + luminanceB) / 3
+		luminance = pixelLen / 255
 		
 		if luminance < 0 then luminance = 0 end
 		if luminance > 1 then luminance = 1 end
@@ -91,7 +88,7 @@ function tetromino:createImage()
 	
 end
 
-function tetromino:place(onImage) 
+function block:place(onImage) 
 	
 	curPoint = point(1,1)
 	onImageData = onImage:getData()
@@ -107,10 +104,7 @@ function tetromino:place(onImage)
 				curPoint = curPoint + self.pos
 				
 				onImageData:paste(thisImage, (curPoint.x * 32), (curPoint.y * 32), 0,0,thisImage:getWidth(), thisImage:getHeight())
-				--love.graphics.draw( self.img, 
-					--				(curPoint.x * 32), 
-						--			(curPoint.y * 32), 
-							--		0, 1, 1, 0, 0, 0, 0 )
+
 			end
 			
 		end
@@ -120,7 +114,7 @@ function tetromino:place(onImage)
 						
 end
 
-function tetromino:draw(offset) 
+function block:draw(offset) 
 	
 	curPoint = point(1,1)
 	
@@ -143,7 +137,7 @@ function tetromino:draw(offset)
 						
 end
 
-function tetromino:deletePart(part)
+function block:deletePart(part)
 	
 	partCount = 0
 	for y = 1, #self.design do
@@ -170,9 +164,9 @@ function tetromino:deletePart(part)
 
 end
 
-function tetromino:__tostring()
+function block:__tostring()
 	
-	return "( tetromino )"
+	return "( block )"
 	
 end
 
