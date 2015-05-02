@@ -18,12 +18,9 @@ function ents.mt:__eq(ent2)
 end
 
 function ents.mt:resolveCollision(ent2)
-	--def resolveCollison(self, ent1, ent2):
-	--n = vector2D()
+
 	local normal = point(ent2.pos.x - self.pos.x, ent2.pos.y - self.pos.y):normalize()
-        --n.x = ent2.pos.x - ent1.pos.x
-        ---n.y = ent2.pos.y - ent1.pos.y
-        --n.normalize()
+
     local a1 = self.vel.dot(normal)
     local a2 = ent2.vel.dot(normal)
     local p = (2 * (a1 - a2)) / (self.mass + ent2.mass)

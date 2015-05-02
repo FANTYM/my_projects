@@ -1,4 +1,6 @@
 require "point"
+require "pixel"
+require "entity"
 require "Color"
 require "Cycler"
 require "Flash"
@@ -10,12 +12,13 @@ titleFont = love.graphics.newFont("differentiator.ttf", 20)
 gameFont = love.graphics.newFont("differentiator.ttf", 10)
 gameTitle = "Toss Battle"
 keys = {}
+mouse = {}
 curKey = "";
 moveRate = 0
 keyRate = 0.02
 keyTimer = love.timer.getTime()
 screenSize = point(love.graphics.getWidth(), love.graphics.getHeight())
-gameSize = point(screenSize.x * 2, screenSize.y)
+gameSize = point(math.ceil(screenSize.x + (screenSize.x * 0.3)), screenSize.y)
 
 screenTween = tweenVal(0, 0, 0)
 
@@ -149,6 +152,8 @@ function love.update(dt)
 	if keys["escape"] then os.exit() end
 	
 	Cycler.runCycles()
+	pixel.movePixels()
+	ents.think()
 	
 	if gameStates.curState == gameStates.MENU then
 	
@@ -209,6 +214,12 @@ function love.update(dt)
 		if keys["down"] and (keyDelta >= (keyRate * 4))  then
 			keyTimer = love.timer.getTime()		
 		end
+		
+		if (mouse["l"] and mouse["l"].down) and (keyDelta >= (keyRate * 2)) then
+			doExplosion(mouse["l"].pos, 5, point(10,-10))
+			keyTimer = love.timer.getTime()		
+		end
+		
 	elseif gameStates.curState == gameStates.SCORES then
 		
 		if utDelta > 10 or (keys["return"] and utDelta > 1) then
@@ -237,19 +248,43 @@ end
 function love.mousepressed( x, y, button )
 	print("Mouse " .. tostring(button) .. " is down")
 	
+	if not mouse[button] then
+		mouse[button] = {}
+	end
+	mouse[button].down = true
+	mouse[button].pos = point(x,y)
+	
 end
 
 function love.mousereleased( x, y, button )
 	print("Mouse " .. tostring(button) .. " is up")
+	if not mouse[button] then
+		mouse[button] = {}
+	end
+	mouse[button].down = false
+	mouse[button].pos = point(x,y)
+	
 
 end
 
 function love.mousemoved( x, y, dx, dy )
 	--print("Mouse has moved")
+	mouse.pos = point(x,y)
+	mouse.delta = point(dx,dy)
+	
 end
 
 function doExplosion(where, radius, power)
 	
+	print("Boom!")
+	for y = -radius, radius do
+		for x = -radius, radius do
+			newPos = where + point(x,y)
+			if where:closerThan(newPos, radius) then
+				pixel(terrain, newPos , power)
+			end
+		end
+	end
 	
 
 end
@@ -299,14 +334,16 @@ function generateTerrain()
 			prevX = x - 1
 			nextX = x + 1
 			if prevX < 0 then
-				prevX = prevX + gameSize.x 
+				prevX = prevX + (gameSize.x  - 1)
 			end
 			
 			if nextX > gameSize.x - 1 then
-				nextX = nextX - gameSize.x 
+				nextX = nextX - (gameSize.x - 1)
 			end
-			
-			terrainArray[x] = (terrainArray[prevX] + terrainArray[x] + terrainArray[nextX]) / 3.001
+			--print(prevX)
+			--print(x)
+			--print(nextX)
+			terrainArray[x] = (terrainArray[prevX] + terrainArray[x] + terrainArray[nextX]) / 3
 		end
 		
 		
@@ -339,9 +376,9 @@ function generateTerrain()
 	
 	function finalSmooth(x,y,r,g,b,a)
 		
-		if y > (terrainArray[x] - 10) then
-			for i = -2, 2 do
-				for u = -2, 2 do
+		if y > (terrainArray[x] - 1) then
+			for i = -1, 1 do
+				for u = -1, 1 do
 					if (x + i) < terrainData:getWidth() - 1 and (x + i) > 0 then
 						if (y + u) < terrainData:getHeight() - 1 and (y + u ) > 0 then
 							nR,nG,nB,nA = terrainData:getPixel(x + i, y + u)
