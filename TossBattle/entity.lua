@@ -6,6 +6,8 @@ ents.entList = {}
 ents.nextID = 0
 ents.lastThink = love.timer.getTime()
 ents.__index = ents
+ents.gravity = point(0,20)
+ents.collisionImage = ""
 
 function ents.mt:__eq(ent2)
 
@@ -49,6 +51,14 @@ function ents.mt:getPenDist(ent2)
 
 	local dist = self.pos:dist(ent2.pos)
 	return dist - (self.cRadius * ent2.cRadius)
+
+end
+
+function ents.mt:draw(imgDest)
+	
+	imgData = imgDest:getData()
+	
+	imgData:paste(self.img:getData(), self.pos.x + self.cRadius, self.pos.y + self.cRadius, 0,0,16,16)
 
 end
 
@@ -130,6 +140,20 @@ function ents.remove(eInfo)
 	
 end
 
+function ents.draw()
+
+	for k, ent in pairs(ents.entList) do 
+		
+		if not (ent == nil) then
+			
+			love.graphics.draw(ent.img, ent.pos.x, ent.pos.y, 0,0.25,0.25,ent.cRadius * 0.25, ent.cRadius * 0.25)
+			
+		end
+	
+	end
+
+end
+
 function ents.think()
 	
 	local thinkDelta = love.timer.getTime() - ents.lastThink
@@ -139,11 +163,43 @@ function ents.think()
 		
 		if not (ent == nil) then
 			
+			ent.vel = ent.vel + (ents.gravity * thinkDelta)
 			ent.pos = ent.pos + (ent.vel * thinkDelta)
-			ent.vel = ent.vel - ((ent.vel * ent.friction) * thinkDelta)
-		
+			
+			colCheckPos = ent.pos + (ent.vel:getNormal() * ent.cRadius)
+			
+			if pixel.inImage(nil, colCheckPos) then
+				
+				r,g,b,a = ents.collisionImage:getData():getPixel(colCheckPos.x, colCheckPos.y)
+				--print(a)
+				if a > 250 then
+					
+					ent.vel = point(0,0)
+					ent:collide()
+					ents.entList[k] = nil
+					
+				end
+			
+			end
+			
 			if not (ent.think == nil) then
 				ent:think()
+			end
+			
+			if ent.vel:closerThan(point(0,0), 0.25) then
+				
+				--ents.entList[k] = nil
+				if ent.isDead then
+					if love.timer.getTime() - ent.deadTimer > 1 then
+						ents.entList[k] = nil
+					end
+				else
+					ent.isDead = true
+					ent.deadTimer = love.timer.getTime()
+				end
+			else
+				ent.isDead = false
+				
 			end
 			
 		end
@@ -165,6 +221,8 @@ function ents.create(entName, position, velocity, mass, dispImage, collisionRadi
 	newEnt.img = dispImage
 	newEnt.mass = mass
 	newEnt.friction = 0.95
+	newEnt.isDead = false
+	newEnt.deadTimer = love.timer.getTime()
 	newEnt.id = ents.nextID
 	ents.entList[ents.nextID] = newEnt
 	ents.nextID = ents.nextID + 1

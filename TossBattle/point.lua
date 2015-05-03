@@ -94,6 +94,18 @@ function point:normalize()
 	
 end
 
+function point:getNormal()
+	
+	local curLen = self:length()
+	if curLen <=0 then
+		return point(0,0)
+	end
+	
+	return point(self.x / curLen, self.y / curLen)
+	
+end
+
+
 function point:dot(p2)
 
 	return (self.x * p2.x) + (self.y * p2.y)

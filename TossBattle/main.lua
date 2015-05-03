@@ -16,11 +16,11 @@ mouse = {}
 curKey = "";
 moveRate = 0
 keyRate = 0.02
-expPow = -20
+expPow = 50
 keyTimer = love.timer.getTime()
 screenSize = point(love.graphics.getWidth(), love.graphics.getHeight())
 gameSize = point(math.ceil(screenSize.x + (screenSize.x * 0.3)), screenSize.y)
-
+basicShot = love.graphics.newImage("basic_shot.png")
 screenTween = tweenVal(0, 0, 0)
 lastTerrain = love.timer.getTime()
 --viewPos = point(0,0)
@@ -35,6 +35,7 @@ fpsTimer = love.timer.getTime()
 fpsCount = 0
 curFPS = 0
 avgFPS = 0
+ents.collisionImage = terrain
 
 
 colorPool = { Color(255,255,255,255),
@@ -130,6 +131,8 @@ function love.draw()
 		love.graphics.draw( sky, screenTween(), 0, 0,1,1,0,0,0,0)
 		love.graphics.draw( terrain, screenTween(), 0,0,1,1,0,0,0,0)
 		
+		ents.draw()
+		
 		Flash.drawFlashes()
 		
 	elseif gameStates.curState == gameStates.SCORES then
@@ -171,7 +174,7 @@ function love.update(dt)
 	elseif gameStates.curState == gameStates.PLAY then
 
 		terrainDelta = love.timer.getTime() - lastTerrain
-		if terrainDelta > 0.041 then
+		if terrainDelta > 0.0333 then
 				
 			terrain:refresh()
 			lastTerrain = love.timer.getTime()
@@ -228,7 +231,11 @@ function love.update(dt)
 		end
 		
 		if (mouse["l"] and mouse["l"].down) and (keyDelta >= (keyRate * 2)) then
-			doExplosion(mouse["l"].pos, 50, point(0,expPow))
+			--doExplosion(mouse["l"].pos, 10, expPow)
+			ents.create("testShot", mouse["l"].pos, point(0,0) , 10, basicShot, 8, function() end, 
+			function(self)
+				doExplosion(self.pos, self.cRadius * 2, expPow)
+			end)
 			keyTimer = love.timer.getTime()		
 		end
 		
@@ -297,7 +304,7 @@ function doExplosion(where, radius, power)
 			if where:closerThan(newPos, radius) then
 				if pixel.inImage(nil, newPos) then
 					pixelCount = pixelCount + 1
-					if deadCount / pixelCount < 0.5 then
+					if deadCount / pixelCount < 0.75 then
 						terrain:getData():setPixel(newPos.x, newPos.y, 0,0,0,0)
 						deadCount = deadCount  + 1
 						--terrain:refresh()
@@ -308,7 +315,7 @@ function doExplosion(where, radius, power)
 							--diffVec = where - newPos
 							diffVec = newPos - where
 							diffVec:normalize()
-							diffVec = diffVec * power:length()
+							diffVec = diffVec * (power + (math.random() * (power * 0.5)))
 							pixel(newPos , diffVec)
 							
 						end
@@ -319,7 +326,7 @@ function doExplosion(where, radius, power)
 		end
 	end
 	--terrain:refresh()
-	print("pixels created: " .. tostring(pixelCount - deadCount))
+	--print("pixels created: " .. tostring(pixelCount - deadCount))
 	
 
 end

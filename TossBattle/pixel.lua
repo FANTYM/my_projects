@@ -8,7 +8,7 @@ pixel.pixelID = 0
 pixel.minSimTime = 0.0
 pixel.lastSimTime = love.timer.getTime()
 pixel.image = ""
-pixel.gravity = 20
+pixel.gravity = point(0,20)
 
 pixel.__index = pixel
 
@@ -122,7 +122,7 @@ function pixel:move()
 	pixel.clearMapPos(self)
 	local curPos = self:getDispPos()
 	--print("curPos : " .. tostring(self:getDispPos()))
-	self.vel = self.vel + (point(0,pixel.gravity) * simDelta)
+	self.vel = self.vel + (pixel.gravity * simDelta)
 	if self:inImage(self:getDispPos()) then 
 		imgData:setPixel(self:getDispPos().x, self:getDispPos().y, 0, 0, 0, 0)
 	end
@@ -138,8 +138,7 @@ function pixel:move()
 				if not (pxl2 == nil) then
 					self:resolveCollision(pxl2)
 				else
-					--self:resolveCollision(pixel(nextPos, point(0,0)))
-					self.vel = point(0,0)
+					self.vel = -pixel.gravity * simDelta
 				end
 			end
 		end
@@ -152,7 +151,7 @@ function pixel:move()
 	end
 	self.lastSim = love.timer.getTime()
 
-	if (self.vel:closerThan(point(0,0), 0.5)) then
+	if (self.vel:closerThan(point(0,0), 1)) then
 		
 		if self.notMoving then
 			if love.timer.getTime() - self.deadTimer > 1 then
