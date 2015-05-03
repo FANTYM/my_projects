@@ -16,15 +16,17 @@ mouse = {}
 curKey = "";
 moveRate = 0
 keyRate = 0.02
+expPow = -20
 keyTimer = love.timer.getTime()
 screenSize = point(love.graphics.getWidth(), love.graphics.getHeight())
 gameSize = point(math.ceil(screenSize.x + (screenSize.x * 0.3)), screenSize.y)
 
 screenTween = tweenVal(0, 0, 0)
-
+lastTerrain = love.timer.getTime()
 --viewPos = point(0,0)
 gameStates = { MENU = 0 , PLAY = 1, SCORES = 2, TERRAIN=3, curState = 0 }
 terrain = love.graphics.newImage(love.image.newImageData(gameSize.x, gameSize.y))
+pixel.image = terrain
 sky = love.graphics.newImage(love.image.newImageData(gameSize.x, gameSize.y))
 players = {}
 updateTimer = love.timer.getTime()
@@ -168,14 +170,24 @@ function love.update(dt)
 		gameStates.curState = gameStates.PLAY
 	elseif gameStates.curState == gameStates.PLAY then
 
+		terrainDelta = love.timer.getTime() - lastTerrain
+		if terrainDelta > 0.041 then
+				
+			terrain:refresh()
+			lastTerrain = love.timer.getTime()
 		
+		end
 		if (keys["kp+"] or (keys["="] and (keys["lshift"] or keys["rshift"]) ) ) and (keyDelta >= keyRate) then
 			keyTimer = love.timer.getTime()		
-			generateTerrain()
+			--generateTerrain()
+			expPow = expPow + 1
+			print(expPow)
 		end
 		
 		if (keys["kp-"] or keys["-"]) and (keyDelta >= keyRate) then
 			keyTimer = love.timer.getTime()		
+			expPow = expPow - 1
+			print(expPow)
 		end
 		
 		if keys[" "] and (keyDelta >= keyRate) then
@@ -216,7 +228,7 @@ function love.update(dt)
 		end
 		
 		if (mouse["l"] and mouse["l"].down) and (keyDelta >= (keyRate * 2)) then
-			doExplosion(mouse["l"].pos, 5, point(10,-10))
+			doExplosion(mouse["l"].pos, 50, point(0,expPow))
 			keyTimer = love.timer.getTime()		
 		end
 		
@@ -277,14 +289,37 @@ end
 function doExplosion(where, radius, power)
 	
 	print("Boom!")
+	pixelCount = 0
+	deadCount = 0
 	for y = -radius, radius do
 		for x = -radius, radius do
 			newPos = where + point(x,y)
 			if where:closerThan(newPos, radius) then
-				pixel(terrain, newPos , power)
+				if pixel.inImage(nil, newPos) then
+					pixelCount = pixelCount + 1
+					if deadCount / pixelCount < 0.5 then
+						terrain:getData():setPixel(newPos.x, newPos.y, 0,0,0,0)
+						deadCount = deadCount  + 1
+						--terrain:refresh()
+					else
+						
+						r,g,b,a = terrain:getData():getPixel(newPos.x, newPos.y)
+						if not (a == 0) then
+							--diffVec = where - newPos
+							diffVec = newPos - where
+							diffVec:normalize()
+							diffVec = diffVec * power:length()
+							pixel(newPos , diffVec)
+							
+						end
+					
+					end
+				end
 			end
 		end
 	end
+	--terrain:refresh()
+	print("pixels created: " .. tostring(pixelCount - deadCount))
 	
 
 end
@@ -317,9 +352,9 @@ function generateTerrain()
 	
 	
 	
-	for s = 0, 50 + (math.random() * 50) do
+	for s = 0, 25 + (math.random() * 25) do
 		
-		for p = 0, (math.random() * 5) do
+		for p = 0, (math.random() * 10) do
 		
 			for x = 1, gameSize.x - 2 do
 					
@@ -398,7 +433,7 @@ function generateTerrain()
 	
 	terrainData:mapPixel(finalSmooth)
 	
-	terrain:refresh()
+	--terrain:refresh()
 	
 end
 
