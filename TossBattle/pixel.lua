@@ -119,13 +119,11 @@ function pixel:move()
 	
 	imgData = pixel.image:getData()
 	simDelta = love.timer.getTime() - self.lastSim
-	pixel.clearMapPos(self)
-	local curPos = self:getDispPos()
-	--print("curPos : " .. tostring(self:getDispPos()))
-	self.vel = self.vel + (pixel.gravity * simDelta)
 	if self:inImage(self:getDispPos()) then 
 		imgData:setPixel(self:getDispPos().x, self:getDispPos().y, 0, 0, 0, 0)
+		pixel.clearMapPos(self)
 	end
+	self.vel = self.vel + (pixel.gravity * simDelta)
 	local nextPos = self.pos + (self.vel * simDelta)
 	nextPos.x = math.ceil(nextPos.x)
 	nextPos.y = math.ceil(nextPos.y)
@@ -138,7 +136,7 @@ function pixel:move()
 				if not (pxl2 == nil) then
 					self:resolveCollision(pxl2)
 				else
-					self.vel = -pixel.gravity * simDelta
+					self.vel = self.vel * 0
 				end
 			end
 		end
@@ -184,9 +182,7 @@ function pixel:resolveCollision(pxl2)
 	v2.y = v2.y + p * self.mass * normal.y
 		
 	self.vel = v1
-
 	pxl2.vel = v2
-	--pxl2.mass = 1
 
 end
 

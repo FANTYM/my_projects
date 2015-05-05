@@ -3,12 +3,14 @@ tweenVal.mt = {}
 
 tweenVal.__index = tweenVal
 
-function tweenVal.mt:__call( nStartVal, nEndVal, nTimeToArrive ) 
+function tweenVal.mt:__call( nStartVal, nEndVal, nTimeToArrive, lBound, uBound ) 
 	
 	local tv = {}
 	setmetatable(tv, tweenVal)
 	tv.created = love.timer.getTime()
 	tv.TTL = nTimeToArrive
+	tv.lBound = lBound
+	tv.uBound = uBound
 	tv.percent = 0
 	tv.startVal = nStartVal
 	tv.endVal = nEndVal
@@ -20,7 +22,7 @@ function tweenVal.mt:__call( nStartVal, nEndVal, nTimeToArrive )
 
 end
 
-function tweenVal:__call( nStart, nEnd, nTime)
+function tweenVal:__call( nStart, nEnd, nTime, lBound, uBound)
 	--print(self)
 	if not (nStart == nil) then
 		self.startVal = nStart
@@ -28,6 +30,8 @@ function tweenVal:__call( nStart, nEnd, nTime)
 		self.TTL = nTime
 		self.created = love.timer.getTime()
 		self.isDone = false
+		self.lBound = lBound
+		self.uBound = uBound
 	end
 	self:update()
 	--print(self)
@@ -48,6 +52,14 @@ function tweenVal:update()
 	if self.percent == 1 then self.isDone = true end
 	
 	self.curVal = (self.startVal * (1 - self.percent)) + (self.endVal * (self.percent))
+	
+	if self.lBound then
+		if self.curVal < self.lBound then self.curVal = self.lBound end
+	end
+	
+	if self.uBound then
+		if self.curVal > self.uBound then self.curVal = self.uBound end
+	end
 	
 end
 

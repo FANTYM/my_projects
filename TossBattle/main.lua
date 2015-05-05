@@ -1,40 +1,50 @@
 require "point"
 require "pixel"
 require "entity"
+require "ents"
 require "Color"
 require "Cycler"
 require "Flash"
 require "tweenVal"
+require "player"
+require "viewInformation"
 
 math.randomseed(os.time())
 
 titleFont = love.graphics.newFont("differentiator.ttf", 20)
 gameFont = love.graphics.newFont("differentiator.ttf", 10)
 gameTitle = "Toss Battle"
+players = {}
 keys = {}
 mouse = {}
 curKey = "";
 moveRate = 0
 keyRate = 0.02
 expPow = 50
-keyTimer = love.timer.getTime()
-screenSize = point(love.graphics.getWidth(), love.graphics.getHeight())
-gameSize = point(math.ceil(screenSize.x + (screenSize.x * 0.3)), screenSize.y)
-basicShot = love.graphics.newImage("basic_shot.png")
-screenTween = tweenVal(0, 0, 0)
-lastTerrain = love.timer.getTime()
---viewPos = point(0,0)
-gameStates = { MENU = 0 , PLAY = 1, SCORES = 2, TERRAIN=3, curState = 0 }
-terrain = love.graphics.newImage(love.image.newImageData(gameSize.x, gameSize.y))
-pixel.image = terrain
-sky = love.graphics.newImage(love.image.newImageData(gameSize.x, gameSize.y))
-players = {}
-updateTimer = love.timer.getTime()
-drawTimer = love.timer.getTime()
-fpsTimer = love.timer.getTime()
 fpsCount = 0
 curFPS = 0
 avgFPS = 0
+
+keyTimer = love.timer.getTime()
+updateTimer = love.timer.getTime()
+drawTimer = love.timer.getTime()
+fpsTimer = love.timer.getTime()
+lastTerrain = love.timer.getTime()
+
+gameStates = { MENU = 0 , PLAY = 1, SCORES = 2, TERRAIN=3, curState = 0 }
+
+screenSize = point(love.graphics.getWidth(), love.graphics.getHeight())
+gameSize = point(math.ceil(screenSize.x + (screenSize.x * 0.3)), screenSize.y)
+
+basicShot = love.graphics.newImage("basic_shot.png")
+
+viewInfo = viewInformation.new(point(0,0), gameSize, screenSize, 1)
+--screenTween = tweenVal(point(0,0), point(0,0), 0)
+
+terrain = love.graphics.newImage(love.image.newImageData(gameSize.x, gameSize.y))
+sky = love.graphics.newImage(love.image.newImageData(gameSize.x, gameSize.y))
+
+pixel.image = terrain
 ents.collisionImage = terrain
 
 
@@ -128,8 +138,14 @@ function love.draw()
 	
 		love.graphics.setColor(255,255,255,255)		
 		
-		love.graphics.draw( sky, screenTween(), 0, 0,1,1,0,0,0,0)
-		love.graphics.draw( terrain, screenTween(), 0,0,1,1,0,0,0,0)
+		love.graphics.draw( sky    , viewInfo.pos.x(), viewInfo.pos.y(), 0, 1, 1, 0, 0, 0, 0)
+		love.graphics.draw( terrain, viewInfo.pos.x(), viewInfo.pos.y(), 0, 1, 1, 0, 0, 0, 0)
+		
+		for _, ply in pairs(players) do
+			
+			ply:draw()
+			
+		end
 		
 		ents.draw()
 		
@@ -170,6 +186,8 @@ function love.update(dt)
 	elseif gameStates.curState == gameStates.TERRAIN then
 		generateTerrain()
 		--screenTween = tweenVal(0, -screenSize.x, 1)
+		playerOne = player.new("Fantym", point(50,200), Color(255,0,0,255))
+		players[1] = playerOne
 		gameStates.curState = gameStates.PLAY
 	elseif gameStates.curState == gameStates.PLAY then
 
@@ -199,44 +217,56 @@ function love.update(dt)
 
 		if keys["left"] and (keyDelta >= (keyRate * 3)) then
 			moveRate = (moveRate + 25)
-			if (screenTween() + moveRate) > 0 then
-				screenTween(screenTween(),0,1)
-			else
-				screenTween(screenTween(), screenTween() + moveRate, 1)
-			end
-			--print(viewPos.x)
+			
+			viewInfo:setPos(viewInfo.pos + point(moveRate,0))
+			
 			keyTimer = love.timer.getTime()
 		else
 			moveRate = moveRate  * 0.999
 		end
 		
 		if keys["right"] and (keyDelta >= (keyRate * 3))  then
-			moveRate = (moveRate + 25)
-			if (screenTween() - moveRate) < -(screenSize.x) then
-				screenTween(screenTween(),-(screenSize.x),1)
-			else
-				screenTween(screenTween(), screenTween() - moveRate, 1)
-			end
+			moveRate = (moveRate - 25)
+			
+			viewInfo:setPos(viewInfo.pos + point(moveRate,0))
+			
 			keyTimer = love.timer.getTime()		
 		else
 			moveRate = moveRate  * 0.999
 		end
 		
 		if keys["up"] and (keyDelta >= (keyRate * 4)) then
-			keyTimer = love.timer.getTime()		
+			
+			players[1].angle = players[1].angle + 5
+			if players[1].angle > 90 then
+				players[1].angle = 90
+			end
+			print(players[1].angle)
+			keyTimer = love.timer.getTime()
+			
 		end
 		
 		if keys["down"] and (keyDelta >= (keyRate * 4))  then
+			
+			players[1].angle = players[1].angle - 5
+			if players[1].angle < -90 then
+				players[1].angle = -90
+			end
+			print(players[1].angle)
+		
 			keyTimer = love.timer.getTime()		
 		end
 		
-		if (mouse["l"] and mouse["l"].down) and (keyDelta >= (keyRate * 2)) then
+		if (mouse["l"] and mouse["l"].down) and (keyDelta >= (keyRate * 4)) then
 			--doExplosion(mouse["l"].pos, 10, expPow)
-			ents.create("testShot", mouse["l"].pos, point(0,0) , 10, basicShot, 8, function() end, 
+			newShot = ents.newEntity("testShot" .. tostring(math.random()), mouse.pos, point(-100 + (math.random() * 200),math.random() * 20) , 10, basicShot, 8, function() end, 
 			function(self)
-				doExplosion(self.pos, self.cRadius * 2, expPow)
+				doExplosion(self.pos, self.cRadius * 4, expPow, self.vel)
 			end)
+			newShot:setScale(0.25)
+			
 			keyTimer = love.timer.getTime()		
+			
 		end
 		
 	elseif gameStates.curState == gameStates.SCORES then
@@ -293,10 +323,11 @@ function love.mousemoved( x, y, dx, dy )
 	
 end
 
-function doExplosion(where, radius, power)
+function doExplosion(where, radius, power, hitVel)
 	
 	print("Boom!")
 	pixelCount = 0
+	destroyPerc = 0.1
 	deadCount = 0
 	for y = -radius, radius do
 		for x = -radius, radius do
@@ -304,7 +335,7 @@ function doExplosion(where, radius, power)
 			if where:closerThan(newPos, radius) then
 				if pixel.inImage(nil, newPos) then
 					pixelCount = pixelCount + 1
-					if deadCount / pixelCount < 0.75 then
+					if deadCount / pixelCount < destroyPerc then
 						terrain:getData():setPixel(newPos.x, newPos.y, 0,0,0,0)
 						deadCount = deadCount  + 1
 						--terrain:refresh()
@@ -316,7 +347,7 @@ function doExplosion(where, radius, power)
 							diffVec = newPos - where
 							diffVec:normalize()
 							diffVec = diffVec * (power + (math.random() * (power * 0.5)))
-							pixel(newPos , diffVec)
+							pixel(newPos , (diffVec + hitVel))
 							
 						end
 					
@@ -361,7 +392,7 @@ function generateTerrain()
 	
 	for s = 0, 25 + (math.random() * 25) do
 		
-		for p = 0, (math.random() * 10) do
+		for p = 0, 5 + (math.random() * 25) do
 		
 			for x = 1, gameSize.x - 2 do
 					
