@@ -34,7 +34,7 @@ lastTerrain = love.timer.getTime()
 gameStates = { MENU = 0 , PLAY = 1, SCORES = 2, TERRAIN=3, curState = 0 }
 
 screenSize = point(love.graphics.getWidth(), love.graphics.getHeight())
-gameSize = point(math.ceil(screenSize.x + (screenSize.x * 0.3)), screenSize.y)
+gameSize = point(math.floor(screenSize.x + (screenSize.x * 0.3)), screenSize.y)
 
 basicShot = love.graphics.newImage("basic_shot.png")
 
@@ -347,7 +347,7 @@ function doExplosion(where, radius, power, hitVel)
 							diffVec = newPos - where
 							diffVec:normalize()
 							diffVec = diffVec * (power + (math.random() * (power * 0.5)))
-							pixel(newPos , (diffVec + hitVel))
+							pixel(newPos , (diffVec + hitVel + point(0, -power)))
 							
 						end
 					

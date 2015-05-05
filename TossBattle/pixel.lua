@@ -38,7 +38,7 @@ end
 
 function pixel.getFromMap(pos)
 	
-	mapPos = point(math.ceil(pos.x), math.ceil(pos.y))
+	mapPos = point(math.floor(pos.x), math.floor(pos.y))
 	
 	if pixel.pixelMap[mapPos.y] == nil then
 		pixel.pixelMap[mapPos.y] = {}
@@ -111,7 +111,7 @@ end
 
 function pixel:getDispPos()
 	
-	return point(math.ceil(self.pos.x), math.ceil(self.pos.y))
+	return point(math.floor(self.pos.x), math.floor(self.pos.y))
 
 end
 
@@ -125,8 +125,8 @@ function pixel:move()
 	end
 	self.vel = self.vel + (pixel.gravity * simDelta)
 	local nextPos = self.pos + (self.vel * simDelta)
-	nextPos.x = math.ceil(nextPos.x)
-	nextPos.y = math.ceil(nextPos.y)
+	nextPos.x = math.floor(nextPos.x)
+	nextPos.y = math.floor(nextPos.y)
 	
 	if self:inImage(nextPos) then
 		r,g,b,a  = imgData:getPixel(nextPos.x, nextPos.y)
