@@ -13,6 +13,8 @@ function player.new(plyName, plyPos, plyColor)
 	nPly.color = plyColor
 	nPly.pos = plyPos
 	nPly.angle = 45
+	nPly.power = 100
+	nPly.maxPower = 500
 	
 	treadCopy = love.image.newImageData(player.tankTreads:getWidth(), player.tankTreads:getHeight())
 	treadCopy:paste(player.tankTreads,0,0,0,0,player.tankTreads:getWidth(), player.tankTreads:getHeight())
@@ -48,9 +50,6 @@ function player:draw()
 	self.treadEnt:draw()
 	self.bodyEnt:draw()
 	
-	
-	
-
 
 end
 

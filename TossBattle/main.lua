@@ -24,6 +24,7 @@ expPow = 50
 fpsCount = 0
 curFPS = 0
 avgFPS = 0
+curPly = 1
 
 keyTimer = love.timer.getTime()
 updateTimer = love.timer.getTime()
@@ -187,7 +188,7 @@ function love.update(dt)
 		generateTerrain()
 		--screenTween = tweenVal(0, -screenSize.x, 1)
 		playerOne = player.new("Fantym", point(50,200), Color(255,0,0,255))
-		players[1] = playerOne
+		players[curPly] = playerOne
 		gameStates.curState = gameStates.PLAY
 	elseif gameStates.curState == gameStates.PLAY then
 
@@ -200,19 +201,23 @@ function love.update(dt)
 		end
 		if (keys["kp+"] or (keys["="] and (keys["lshift"] or keys["rshift"]) ) ) and (keyDelta >= keyRate) then
 			keyTimer = love.timer.getTime()		
-			--generateTerrain()
-			expPow = expPow + 1
-			print(expPow)
+			players[curPly].power = players[curPly].power + 1
+			if players[curPly].power > players[curPly].maxPower then
+				players[curPly].power = players[curPly].maxPower
+			end
 		end
 		
 		if (keys["kp-"] or keys["-"]) and (keyDelta >= keyRate) then
 			keyTimer = love.timer.getTime()		
-			expPow = expPow - 1
-			print(expPow)
+			players[curPly].power = players[curPly].power - 1
+			if players[curPly].power < 0 then
+				players[curPly].power = 0
+			end
 		end
 		
-		if keys[" "] and (keyDelta >= keyRate) then
+		if keys[" "] and (keyDelta >= (keyRate * 5)) then
 			keyTimer = love.timer.getTime()		
+			fireShot(players[curPly])
 		end
 
 		if keys["left"] and (keyDelta >= (keyRate * 3)) then
@@ -236,35 +241,30 @@ function love.update(dt)
 		end
 		
 		if keys["up"] and (keyDelta >= (keyRate * 4)) then
-			
-			players[1].angle = players[1].angle + 5
-			if players[1].angle > 90 then
-				players[1].angle = 90
-			end
-			print(players[1].angle)
-			keyTimer = love.timer.getTime()
-			
-		end
-		
-		if keys["down"] and (keyDelta >= (keyRate * 4))  then
-			
+						
 			players[1].angle = players[1].angle - 5
 			if players[1].angle < -90 then
 				players[1].angle = -90
 			end
 			print(players[1].angle)
 		
+			keyTimer = love.timer.getTime()
+			
+		end
+		
+		if keys["down"] and (keyDelta >= (keyRate * 4))  then
+			
+			players[1].angle = players[1].angle + 5
+			if players[1].angle > 90 then
+				players[1].angle = 90
+			end
+			print(players[1].angle)
+
 			keyTimer = love.timer.getTime()		
 		end
 		
 		if (mouse["l"] and mouse["l"].down) and (keyDelta >= (keyRate * 4)) then
-			--doExplosion(mouse["l"].pos, 10, expPow)
-			newShot = ents.newEntity("testShot" .. tostring(math.random()), mouse.pos, point(-100 + (math.random() * 200),math.random() * 20) , 10, basicShot, 8, function() end, 
-			function(self)
-				doExplosion(self.pos, self.cRadius * 4, expPow, self.vel)
-			end)
-			newShot:setScale(0.25)
-			
+
 			keyTimer = love.timer.getTime()		
 			
 		end
@@ -323,11 +323,22 @@ function love.mousemoved( x, y, dx, dy )
 	
 end
 
+function fireShot(ply)
+	
+	shotPos = ply.pos + point(math.sin(math.rad(-ply.angle)) * -16, math.cos(math.rad(-ply.angle)) * -16)
+	newShot = ents.newEntity("testShot" .. tostring(math.random()), shotPos, (shotPos - ply.pos):getNormal() * ply.power , 20, basicShot, 8, function() end, 
+			function(self)
+				doExplosion(self.pos, self.cRadius * 3, ply.power * self.mass, self.vel)
+			end)
+			newShot:setScale(0.25)
+
+end
+
 function doExplosion(where, radius, power, hitVel)
 	
 	print("Boom!")
 	pixelCount = 0
-	destroyPerc = 0.1
+	destroyPerc = 0.6
 	deadCount = 0
 	for y = -radius, radius do
 		for x = -radius, radius do
