@@ -76,8 +76,10 @@ function pixel.mt:__call(pos, vel)
 		setmetatable(pxl, pixel)
 		pxl.pos = pos
 		pxl.vel = vel
+		pxl.img = pixel.image
+		r,g,b,a = pixel.image:getData():getPixel(pos.x, pos.y)
 		pxl.clr = Color(r,g,b,a)
-		pxl.img = img
+		
 		pxl.mass = 1
 		pxl.lastSim = love.timer.getTime()
 		pxl.id = pixel.pixelID

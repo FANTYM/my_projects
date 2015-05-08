@@ -8,6 +8,7 @@ require "Flash"
 require "tweenVal"
 require "player"
 require "viewInformation"
+require "ImageScanner"
 
 math.randomseed(os.time())
 
@@ -25,12 +26,15 @@ fpsCount = 0
 curFPS = 0
 avgFPS = 0
 curPly = 1
+doDrop = false
 
 keyTimer = love.timer.getTime()
 updateTimer = love.timer.getTime()
 drawTimer = love.timer.getTime()
 fpsTimer = love.timer.getTime()
 lastTerrain = love.timer.getTime()
+
+
 
 gameStates = { MENU = 0 , PLAY = 1, SCORES = 2, TERRAIN=3, curState = 0 }
 
@@ -43,11 +47,26 @@ viewInfo = viewInformation.new(point(0,0), gameSize, screenSize, 1)
 --screenTween = tweenVal(point(0,0), point(0,0), 0)
 
 terrain = love.graphics.newImage(love.image.newImageData(gameSize.x, gameSize.y))
+tData = terrain:getData()
 sky = love.graphics.newImage(love.image.newImageData(gameSize.x, gameSize.y))
 
 pixel.image = terrain
 ents.collisionImage = terrain
 
+terrainScan = ImageScanner.new(terrain, 
+	function(x,y,clr)
+		if clr.a == 0 then
+			return true
+		end
+		return false
+	end,
+	function(x,y,clr,imgInfo)
+		for nY = y, 0, -1 do
+			pixel(point(x,nY), point(0,1))
+			imgInfo.imgData:setPixel(x,nY, clr.r, clr.g, clr.b, 0)
+		end
+	end)
+terrainScan:setUBounds(point(10,10))
 
 colorPool = { Color(255,255,255,255),
   		      Color(255,  0,  0,255),
@@ -191,7 +210,7 @@ function love.update(dt)
 		players[curPly] = playerOne
 		gameStates.curState = gameStates.PLAY
 	elseif gameStates.curState == gameStates.PLAY then
-
+		
 		terrainDelta = love.timer.getTime() - lastTerrain
 		if terrainDelta > 0.0333 then
 				
@@ -199,6 +218,33 @@ function love.update(dt)
 			lastTerrain = love.timer.getTime()
 		
 		end
+		
+		terrainScan:run()
+		
+		--if (doDrop)then
+			--doDrop = false
+			--tHeight = tData:getHeight()
+			--function dropIt(x,y,r,g,b,a)
+				
+				--if y + 1 < tHeight then
+					--nR,nG,nB,nA = tData:getPixel(x, y + 1)
+					--print(nA)
+					--if (nA == 0) and (a > 250) then
+						--pixel(point(x,y), point(0,0))
+						--print("making pixel")
+--						return r,g,b,0
+					--end
+				--end
+				
+				--return r,g,b,a 				
+				
+			--end
+			
+			--tData:mapPixel(dropIt)
+			--lastTerrain = love.timer.getTime()
+		
+		
+		--end
 		if (keys["kp+"] or (keys["="] and (keys["lshift"] or keys["rshift"]) ) ) and (keyDelta >= keyRate) then
 			keyTimer = love.timer.getTime()		
 			players[curPly].power = players[curPly].power + 1
@@ -340,6 +386,8 @@ function doExplosion(where, radius, power, hitVel)
 	pixelCount = 0
 	destroyPerc = 0.6
 	deadCount = 0
+	terrainScan:setLBounds(where - point(radius * 2,radius * 2))
+	terrainScan:setUBounds(where + point(radius * 2,radius * 2))
 	for y = -radius, radius do
 		for x = -radius, radius do
 			newPos = where + point(x,y)
@@ -367,6 +415,8 @@ function doExplosion(where, radius, power, hitVel)
 			end
 		end
 	end
+	
+	doDrop = true
 	--terrain:refresh()
 	--print("pixels created: " .. tostring(pixelCount - deadCount))
 	
@@ -375,7 +425,6 @@ end
 
 function generateTerrain()
 	
-	terrainData = terrain:getData()
 	
 	function wipeFunc(x,y,r,g,b,a)
 	
@@ -383,7 +432,7 @@ function generateTerrain()
 		
 	end
 	
-	terrainData:mapPixel(wipeFunc)
+	tData:mapPixel(wipeFunc)
 	
 	
 	terrainArray = {}
@@ -456,16 +505,16 @@ function generateTerrain()
 		
 	end
 	
-	terrainData:mapPixel(pix_func)
+	tData:mapPixel(pix_func)
 	
 	function finalSmooth(x,y,r,g,b,a)
 		
 		if y > (terrainArray[x] - 1) then
 			for i = -1, 1 do
 				for u = -1, 1 do
-					if (x + i) < terrainData:getWidth() - 1 and (x + i) > 0 then
-						if (y + u) < terrainData:getHeight() - 1 and (y + u ) > 0 then
-							nR,nG,nB,nA = terrainData:getPixel(x + i, y + u)
+					if (x + i) < tData:getWidth() - 1 and (x + i) > 0 then
+						if (y + u) < tData:getHeight() - 1 and (y + u ) > 0 then
+							nR,nG,nB,nA = tData:getPixel(x + i, y + u)
 							r = (r + nR) * 0.5
 							g = (g + nG) * 0.5
 							b = (b + nB) * 0.5
@@ -480,9 +529,9 @@ function generateTerrain()
 		
 	end
 	
-	terrainData:mapPixel(finalSmooth)
+	tData:mapPixel(finalSmooth)
 	
-	--terrain:refresh()
+	terrain:refresh()
 	
 end
 
