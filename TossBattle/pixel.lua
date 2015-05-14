@@ -79,7 +79,7 @@ function pixel.mt:__call(pos, vel)
 		pxl.img = pixel.image
 		r,g,b,a = pixel.image:getData():getPixel(pos.x, pos.y)
 		pxl.clr = Color(r,g,b,a)
-		
+		--pixel.image:setPixel(pos.x.pos.y, r,g,b,0)
 		pxl.mass = 1
 		pxl.lastSim = love.timer.getTime()
 		pxl.id = pixel.pixelID

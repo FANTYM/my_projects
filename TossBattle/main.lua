@@ -9,6 +9,7 @@ require "tweenVal"
 require "player"
 require "viewInformation"
 require "ImageScanner"
+require "effect"
 
 math.randomseed(os.time())
 
@@ -34,13 +35,12 @@ drawTimer = love.timer.getTime()
 fpsTimer = love.timer.getTime()
 lastTerrain = love.timer.getTime()
 
-
-
 gameStates = { MENU = 0 , PLAY = 1, SCORES = 2, TERRAIN=3, curState = 0 }
 
 screenSize = point(love.graphics.getWidth(), love.graphics.getHeight())
 gameSize = point(math.floor(screenSize.x + (screenSize.x * 0.3)), screenSize.y)
 
+tankFire = love.graphics.newImage("tank_fire.png")
 basicShot = love.graphics.newImage("basic_shot.png")
 
 viewInfo = viewInformation.new(point(0,0), gameSize, screenSize, 1)
@@ -53,20 +53,21 @@ sky = love.graphics.newImage(love.image.newImageData(gameSize.x, gameSize.y))
 pixel.image = terrain
 ents.collisionImage = terrain
 
-terrainScan = ImageScanner.new(terrain, 
-	function(x,y,clr)
-		if clr.a == 0 then
-			return true
-		end
-		return false
-	end,
-	function(x,y,clr,imgInfo)
-		for nY = y, 0, -1 do
-			pixel(point(x,nY), point(0,1))
-			imgInfo.imgData:setPixel(x,nY, clr.r, clr.g, clr.b, 0)
-		end
-	end)
-terrainScan:setUBounds(point(10,10))
+--
+--terrainScan = ImageScanner.new(terrain, 1, 
+--	function(x,y,clr)
+--		if clr.a == 0 then
+--			return true
+--		end
+--		return false
+--	end,
+--	function(x,y,clr,imgInfo)
+--		for nY = y, 0, -1 do
+--			pixel(point(x,nY), point(0,2))
+--			--imgInfo.imgData:setPixel(x,nY, 0,0,0,0)
+--		end
+--	end)
+--terrainScan:setUBounds(point(10,10))
 
 colorPool = { Color(255,255,255,255),
   		      Color(255,  0,  0,255),
@@ -138,6 +139,8 @@ function love.draw()
 		fpsTimer = love.timer.getTime()
 	end
 	
+	
+	
 	if gameStates.curState == gameStates.MENU then
 		
 		--font = love.graphics.getFont()
@@ -180,6 +183,8 @@ function love.draw()
 		love.graphics.print("Press [Enter] to return to the menu", (screenSize.x * 0.5) - (font:getWidth("Press [Enter] to return to the menu") * 0.5), 330)
 		
 	end
+	
+	effect.drawEffects()
 
 end
 
@@ -202,6 +207,16 @@ function love.update(dt)
 			gameStates.curState = gameStates.TERRAIN
 			
 		end
+		
+		if (mouse["l"] and mouse["l"].down) and (keyDelta >= (keyRate * 4)) then
+			
+			--effect.new(effName, position, velocity, dispImage, timeToLive, animInfo)
+			--thisEff = effect.new("test", mouse.pos, point(0,0), love.graphics.newImage("explosion.png"), 0.75, {fCount = 13, fSize = point(196,196), fps = 17})
+			thisEff = effect.new("test", mouse.pos, point(0,0), tankFire, -1, {fSize = point(128,128), fps = 24, loop = true, curFrame = math.floor(math.random() * 32)})
+			thisEff:setScale(3)
+			keyTimer = love.timer.getTime()		
+			
+		end
 	
 	elseif gameStates.curState == gameStates.TERRAIN then
 		generateTerrain()
@@ -219,7 +234,7 @@ function love.update(dt)
 		
 		end
 		
-		terrainScan:run()
+		--terrainScan:run()
 		
 		--if (doDrop)then
 			--doDrop = false
@@ -310,7 +325,10 @@ function love.update(dt)
 		end
 		
 		if (mouse["l"] and mouse["l"].down) and (keyDelta >= (keyRate * 4)) then
-
+			
+			--effect.new(effName, position, velocity, dispImage, timeToLive, animInfo)
+			--effect.new("test", mouse.pos, mouse.delta, love.graphics.newImage("explosion.png"), 5, {fCount = 13, fSize = point(196,196), fps = 7})
+			effect.new("test", mouse.pos, mouse.delta, love.graphics.newImage("explosion.png"), 0.75, {fCount = 13, fSize = point(196,196), fps = 17})
 			keyTimer = love.timer.getTime()		
 			
 		end
@@ -386,8 +404,10 @@ function doExplosion(where, radius, power, hitVel)
 	pixelCount = 0
 	destroyPerc = 0.6
 	deadCount = 0
-	terrainScan:setLBounds(where - point(radius * 2,radius * 2))
-	terrainScan:setUBounds(where + point(radius * 2,radius * 2))
+	--terrainScan:setLBounds(where - point(radius * 2,radius * 2))
+	--terrainScan:setUBounds(where + point(radius * 2,radius * 2))
+	thisBoom = effect.new("exp" .. tostring(where), where, hitVel, love.graphics.newImage("explosion.png"), 0.75, {fCount = 13, fSize = point(196,196), fps = 17})
+	thisBoom:setScale(0.5)
 	for y = -radius, radius do
 		for x = -radius, radius do
 			newPos = where + point(x,y)
@@ -415,7 +435,7 @@ function doExplosion(where, radius, power, hitVel)
 			end
 		end
 	end
-	
+	--terrainScan:doRuns()
 	doDrop = true
 	--terrain:refresh()
 	--print("pixels created: " .. tostring(pixelCount - deadCount))

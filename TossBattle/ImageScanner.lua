@@ -4,7 +4,7 @@ require "point"
 ImageScanner = {}
 ImageScanner.__index = ImageScanner
 
-function ImageScanner.new(imgToScan, checkFunc, resultFunc)
+function ImageScanner.new(imgToScan, numRuns, checkFunc, resultFunc)
 	
 	nIs = {}
 	setmetatable(nIs, ImageScanner)
@@ -20,6 +20,8 @@ function ImageScanner.new(imgToScan, checkFunc, resultFunc)
 	nIs.lastG = 0
 	nIs.lastB = 0
 	nIs.lastA = 0
+	nIs.curRuns = 0
+	nIs.totalRuns = numRuns
 	nIs.lBounds = point(0,0)
 	nIs.uBounds = point(nIs.width - 1, nIs.height - 1)
 	
@@ -29,17 +31,31 @@ function ImageScanner.new(imgToScan, checkFunc, resultFunc)
 
 end
 
+function ImageScanner:doRuns()
+
+	self.curRuns = 0
+	self.running = true
+	
+end
+
+
+function ImageScanner:setRuns(numRuns)
+	
+	self.totalRuns = numRuns
+
+end
+
 function ImageScanner:setLBounds(newBounds)
 	
 	self.lBounds = newBounds
-	self:doBounds()
+
 	
 end
 
 function ImageScanner:setUBounds(newBounds)
 	
 	self.uBounds = newBounds
-	self:doBounds()
+
 	
 end
 
@@ -58,6 +74,11 @@ function ImageScanner:doBounds()
 		self.y = self.y + 1
 		if self.y >= self.uBounds.y then
 			self.y = self.lBounds.y
+			self.curRuns = self.curRuns + 1
+			if self.curRuns > self.totalRuns then
+				self.running = false
+				print("finished runs")
+			end
 		end
 	end
 
@@ -67,7 +88,7 @@ end
 function ImageScanner:run()
 	
 	if not self.running then return end
-	
+	--print("run")
 	self:doBounds()
 	
 	self.lastR, self.lastG, self.lastB, self.lastA = self.imgData:getPixel(self.x,self.y)
