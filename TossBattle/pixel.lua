@@ -8,9 +8,42 @@ pixel.pixelID = 0
 pixel.minSimTime = 0.0
 pixel.lastSimTime = love.timer.getTime()
 pixel.image = ""
+pixel.imgData = ""
 pixel.gravity = point(0,20)
 
 pixel.__index = pixel
+
+function pixel.count()
+	
+	count = 0
+	
+	for k, pxl in pairs(pixel.pixels) do
+		if pxl then
+			count = count + 1
+		end
+	end
+	
+	return count
+
+end
+
+function pixel.setImage(newImg)
+	
+	pixel.image = newImg
+	pixel.imgData = newImg:getData()
+
+end
+
+function pixel.drawPixels()
+	
+	for k, pxl in pairs(pixel.pixels) do
+		love.graphics.setColor(pxl.clr.r,pxl.clr.g,pxl.clr.b,pxl.clr.a)		
+		love.graphics.point(pxl.pos.x, pxl.pos.y)
+	end
+	
+	love.graphics.setColor(255,255,255,255)		
+	
+end
 
 function pixel.putInMap(pxl)
 
@@ -65,6 +98,17 @@ function pixel.movePixels()
 	
 end
 
+function pixel:destroy()
+	
+	if self:inImage(self:getDispPos()) then
+		pixel.imgData:setPixel(self:getDispPos().x, self:getDispPos().y, self.clr.r, self.clr.g, self.clr.b, self.clr.a)
+	end
+	
+	pixel.clearMapPos(self)
+	
+	pixel.pixels[self.id] = nil	
+
+end
 
 function pixel.mt:__call(pos, vel) 
 	
@@ -77,9 +121,13 @@ function pixel.mt:__call(pos, vel)
 		pxl.pos = pos
 		pxl.vel = vel
 		pxl.img = pixel.image
-		r,g,b,a = pixel.image:getData():getPixel(pos.x, pos.y)
-		pxl.clr = Color(r,g,b,a)
-		--pixel.image:setPixel(pos.x.pos.y, r,g,b,0)
+		if pxl:inImage() then
+			r,g,b,a = pixel.image:getData():getPixel(pos.x, pos.y)
+			pxl.clr = Color(r,g,b,a)
+			pixel.imgData:setPixel(pos.x, pos.y, r,g,b,0)
+		else
+			pxl.clr = Color(0,0,0,0)
+		end
 		pxl.mass = 1
 		pxl.lastSim = love.timer.getTime()
 		pxl.id = pixel.pixelID
@@ -100,10 +148,13 @@ end
 
 function pixel:inImage(nPos)
 	
-	imgData = pixel.image:getData()
+	--pixel.imgData = pixel.image:getData()
+	if not nPos then
+		nPos = self.pos
+	end
 	
-	if ((nPos.x >= 0) and (nPos.x <= (imgData:getWidth() - 1))) and
-	   ((nPos.y >= 0) and (nPos.y <= (imgData:getHeight() - 1))) then
+	if ((nPos.x >= 0) and (nPos.x <= (pixel.imgData:getWidth() - 1))) and
+	   ((nPos.y >= 0) and (nPos.y <= (pixel.imgData:getHeight() - 1))) then
 		return true
 	end
 	
@@ -119,43 +170,39 @@ end
 
 function pixel:move()
 	
-	imgData = pixel.image:getData()
+	--imgData = pixel.image:getData()
 	simDelta = love.timer.getTime() - self.lastSim
 	if self:inImage(self:getDispPos()) then 
-		imgData:setPixel(self:getDispPos().x, self:getDispPos().y, 0, 0, 0, 0)
 		pixel.clearMapPos(self)
 	end
 	self.vel = self.vel + (pixel.gravity * simDelta)
 	local nextPos = self.pos + (self.vel * simDelta)
 	nextPos.x = math.floor(nextPos.x)
 	nextPos.y = math.floor(nextPos.y)
+		
+	pxl2 = pixel.getFromMap(nextPos)
 	
-	if self:inImage(nextPos) then
-		r,g,b,a  = imgData:getPixel(nextPos.x, nextPos.y)
-		if a > 250 then
-			local pxl2 = pixel.getFromMap(nextPos)
-			if not (pxl2 == self) then
-				if not (pxl2 == nil) then
-					self:resolveCollision(pxl2)
-				else
-					self.vel = self.vel * 0
-				end
-			end
+	if pxl2 then
+		self:resolveCollision(pxl2, true)
+	else
+		if self:inImage(nextPos) then
+			r,g,b,a  = pixel.imgData:getPixel(nextPos.x, nextPos.y)
+		end
+		
+		if a > 128 then
+			--self:destroy()
+			--self.vel = -self.vel
+			self:resolveCollision(nextPos, false)
+		else
+			self.pos = self.pos + (self.vel * simDelta)
 		end
 	end
-	
-	self.pos = self.pos + (self.vel * simDelta)
-	
-	if self:inImage(self:getDispPos()) then
-		imgData:setPixel(self:getDispPos().x, self:getDispPos().y, self.clr.r, self.clr.g, self.clr.b, self.clr.a)
-	end
-	self.lastSim = love.timer.getTime()
 
-	if (self.vel:closerThan(point(0,0), 1)) then
+	if (self.vel:closerThan(point(0,0), 3)) then
 		
 		if self.notMoving then
-			if love.timer.getTime() - self.deadTimer > 1 then
-				pixel.pixels[self.id] = nil	
+			if love.timer.getTime() - self.deadTimer > 0.5 then
+				self:destroy()
 			end
 		else
 			self.deadTimer = love.timer.getTime()
@@ -166,25 +213,47 @@ function pixel:move()
 		pixel.putInMap(self)
 	end
 	
+	self.lastSim = love.timer.getTime()
+	
 end
 
-function pixel:resolveCollision(pxl2)
+function pixel:resolveCollision(pxl2, canMove)
 	
-	local normal = point(pxl2.pos.x - self.pos.x, pxl2.pos.y - self.pos.y):normalize()
-	local a1 = self.vel:dot(normal)
-	local a2 = pxl2.vel:dot(normal)
-	local p = (2 * (a1 - a2)) / (self.mass + pxl2.mass)
-	local v1 = self.vel:copy()
-	local v2 = pxl2.vel:copy()
-	
-	v1.x = v1.x - p * pxl2.mass * normal.x
-	v1.y = v1.y - p * pxl2.mass * normal.y
-	
-	v2.x = v2.x + p * self.mass * normal.x
-	v2.y = v2.y + p * self.mass * normal.y
+	if canMove then
+		normal = point(pxl2.pos.x - self.pos.x, pxl2.pos.y - self.pos.y):normalize()
+		a1 = self.vel:dot(normal)
+		a2 = pxl2.vel:dot(normal)
+		p = (2 * (a1 - a2)) / (self.mass + pxl2.mass)
+		v1 = self.vel:copy()
+		v2 = pxl2.vel:copy()
 		
-	self.vel = v1
-	pxl2.vel = v2
+		v1.x = v1.x - p * pxl2.mass * normal.x
+		v1.y = v1.y - p * pxl2.mass * normal.y
+		
+		v2.x = v2.x + p * self.mass * normal.x
+		v2.y = v2.y + p * self.mass * normal.y
+		
+		self.vel = v1
+		pxl2.vel = v2
+	else
+		normal = point(pxl2.x - self.pos.x, pxl2.y - self.pos.y):normalize()
+		a1 = self.vel:dot(normal)
+		a2 = point(0,0):dot(normal)
+		p = (2 * (a1 - a2)) / (self.mass + (self.mass * self.mass))
+		v1 = self.vel:copy()
+		v2 = point(0,0)
+		
+		v1.x = v1.x - p * (self.mass * self.mass) * normal.x
+		v1.y = v1.y - p * (self.mass * self.mass) * normal.y
+		
+		v2.x = v2.x + p * self.mass * normal.x
+		v2.y = v2.y + p * self.mass * normal.y	
+		
+		self.vel = v1 * 0.5
+		
+	end
+		
+	
 
 end
 

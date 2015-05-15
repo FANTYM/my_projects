@@ -42,6 +42,7 @@ gameSize = point(math.floor(screenSize.x + (screenSize.x * 0.3)), screenSize.y)
 
 tankFire = love.graphics.newImage("tank_fire.png")
 basicShot = love.graphics.newImage("basic_shot.png")
+explosion = love.graphics.newImage("explosion.png")
 
 viewInfo = viewInformation.new(point(0,0), gameSize, screenSize, 1)
 --screenTween = tweenVal(point(0,0), point(0,0), 0)
@@ -50,7 +51,8 @@ terrain = love.graphics.newImage(love.image.newImageData(gameSize.x, gameSize.y)
 tData = terrain:getData()
 sky = love.graphics.newImage(love.image.newImageData(gameSize.x, gameSize.y))
 
-pixel.image = terrain
+pixel.setImage(terrain)
+
 ents.collisionImage = terrain
 
 --
@@ -139,8 +141,6 @@ function love.draw()
 		fpsTimer = love.timer.getTime()
 	end
 	
-	
-	
 	if gameStates.curState == gameStates.MENU then
 		
 		--font = love.graphics.getFont()
@@ -163,6 +163,8 @@ function love.draw()
 		
 		love.graphics.draw( sky    , viewInfo.pos.x(), viewInfo.pos.y(), 0, 1, 1, 0, 0, 0, 0)
 		love.graphics.draw( terrain, viewInfo.pos.x(), viewInfo.pos.y(), 0, 1, 1, 0, 0, 0, 0)
+		--love.graphics.draw( pixels.pixLayer, viewInfo.pos.x(), viewInfo.pos.y(), 0, 1, 1, 0, 0, 0, 0 )
+		pixel.drawPixels()
 		
 		for _, ply in pairs(players) do
 			
@@ -194,6 +196,11 @@ function love.update(dt)
 	curTime = love.timer.getTime()
 	utDelta = love.timer.getTime() - updateTimer
 	keyDelta = curTime - keyTimer
+	
+	if utDelta > 1 then 
+		updateTimer = love.timer.getTime()
+		return
+	end
 
 	if keys["escape"] then os.exit() end
 	
@@ -212,8 +219,8 @@ function love.update(dt)
 			
 			--effect.new(effName, position, velocity, dispImage, timeToLive, animInfo)
 			--thisEff = effect.new("test", mouse.pos, point(0,0), love.graphics.newImage("explosion.png"), 0.75, {fCount = 13, fSize = point(196,196), fps = 17})
-			thisEff = effect.new("test", mouse.pos, point(0,0), tankFire, -1, {fSize = point(128,128), fps = 24, loop = true, curFrame = math.floor(math.random() * 32)})
-			thisEff:setScale(3)
+			thisEff = effect.new("test", mouse.pos, point(0,0), tankFire, 5, {name = "", fCount = point(8,8), fps = 16, loop = false})
+			thisEff.pos = thisEff.pos - point(0,64)
 			keyTimer = love.timer.getTime()		
 			
 		end
@@ -328,7 +335,9 @@ function love.update(dt)
 			
 			--effect.new(effName, position, velocity, dispImage, timeToLive, animInfo)
 			--effect.new("test", mouse.pos, mouse.delta, love.graphics.newImage("explosion.png"), 5, {fCount = 13, fSize = point(196,196), fps = 7})
-			effect.new("test", mouse.pos, mouse.delta, love.graphics.newImage("explosion.png"), 0.75, {fCount = 13, fSize = point(196,196), fps = 17})
+			---effect.new("test3", mouse.pos, point(0,-20), love.graphics.newImage("explosion.png"), -1, {fSize = point(196,196), fps = 13})
+			effect.new("test3", mouse.pos, point(0,-20), love.graphics.newImage("explosion.png"), -1, {name = "", fCount = point(13,1), fps = 16, loop = false})
+			
 			keyTimer = love.timer.getTime()		
 			
 		end
@@ -340,6 +349,19 @@ function love.update(dt)
 			updateTimer = curTime
 		end
 		
+	end
+	
+	if keys["d"] and (keyDelta >= (keyRate * 4)) then
+		
+		print("**************** Debug Print *************************")
+		print("")
+		print("Effect Count: " .. tostring(effect.count()))
+		print("Pixel Count: " .. tostring(pixel.count()))
+		print("FPS: " .. tostring(curFPS))
+		print("avgFPS: " .. tostring(avgFPS))
+		print("******************************************************")
+		
+		keyTimer = love.timer.getTime()
 	end
 	
 end
@@ -406,7 +428,7 @@ function doExplosion(where, radius, power, hitVel)
 	deadCount = 0
 	--terrainScan:setLBounds(where - point(radius * 2,radius * 2))
 	--terrainScan:setUBounds(where + point(radius * 2,radius * 2))
-	thisBoom = effect.new("exp" .. tostring(where), where, hitVel, love.graphics.newImage("explosion.png"), 0.75, {fCount = 13, fSize = point(196,196), fps = 17})
+	thisBoom = effect.new("exp" .. tostring(where), where, hitVel, explosion, -1, {name = "", fCount = point(13,1), fps = 16, loop = false})
 	thisBoom:setScale(0.5)
 	for y = -radius, radius do
 		for x = -radius, radius do
@@ -426,7 +448,7 @@ function doExplosion(where, radius, power, hitVel)
 							diffVec = newPos - where
 							diffVec:normalize()
 							diffVec = diffVec * (power + (math.random() * (power * 0.5)))
-							pixel(newPos , (diffVec + hitVel + point(0, -power)))
+							pixel(newPos , (diffVec + hitVel)) --- + point(0, -power)))
 							
 						end
 					

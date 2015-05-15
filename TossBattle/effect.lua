@@ -5,6 +5,20 @@ effect.__index = effect
 effect.effects = {}
 effect.curIndex = 0
 
+function effect.count()
+	
+	count = 0
+	
+	for k, eff in pairs(effect.effects) do
+		if eff then
+			count = count + 1
+		end
+	end
+	
+	return count
+
+end
+
 function effect:__eq(eff2)
 
 	if (self.id == eff2.id) then
@@ -51,6 +65,7 @@ function effect.new(effName, position, velocity, dispImage, timeToLive, animInfo
 	newEff.created = love.timer.getTime()
 	newEff.visible = true
 	newEff.ttl = timeToLive
+	newEff.lastDraw = newEff.created
 	
 	if animInfo then
 		
@@ -59,32 +74,39 @@ function effect.new(effName, position, velocity, dispImage, timeToLive, animInfo
 		
 		-- setup images
 		newEff.srcImgData = dispImage:getData()
+		
+		-- passed info animInfo{ name=, loop= , fps= , fCount = , tFrames = }
+		
+		animInfo.index = 0
+		animInfo.fSize = point(math.floor(newEff.srcImgData:getWidth() / animInfo.fCount.x), math.floor(newEff.srcImgData:getHeight() / animInfo.fCount.y))
+		animInfo.curFrame = animInfo.curFrame or 0
+		animInfo.tFrames = animInfo.tFrames or (animInfo.fCount.x * animInfo.fCount.y)
+		animInfo.lastFrameTime = love.timer.getTime()
+		animInfo.timePerFrame = 1 / animInfo.fps
+		animInfo.fRow = math.floor(animInfo.curFrame / animInfo.fCount.x);
+		animInfo.fCol = math.floor(animInfo.curFrame % animInfo.fCount.x);
+		
 		newEff.img = love.graphics.newImage(love.image.newImageData(animInfo.fSize.x, animInfo.fSize.y))
 		newEff.imgData = newEff.img:getData()
 		
-		-- passed info animInfo{ name=, loop= , fps= , fSize = }
-		
-		animInfo.index = 0
-		animInfo.fCount = point(math.floor(newEff.srcImgData:getWidth() / animInfo.fSize.x), math.floor(newEff.srcImgData:getHeight() / animInfo.fSize.y))
-		animInfo.tCount = animInfo.fCount.x * animInfo.fCount.y
-		animInfo.curFrame = animInfo.curFrame or 0
-		animInfo.lastFrameTime = love.timer.getTime()
-		animInfo.timePerFrame = 1 / animInfo.fps
-		animInfo.fRow = math.floor(animInfo.curFrame / animInfo.fCount.y);
-		animInfo.fCol = math.floor(animInfo.curFrame % animInfo.fCount.x);
-		newEff.imgData:paste(newEff.srcImgData, 0,0, animInfo.fCol * animInfo.fSize.x, animInfo.fRow * animInfo.fSize.x, animInfo.fSize.x, animInfo.fSize.y)
+		newEff.imgData:paste(newEff.srcImgData, 0,0, animInfo.fCol * animInfo.fSize.x, animInfo.fRow * animInfo.fSize.y, animInfo.fSize.x, animInfo.fSize.y)
 		newEff.img:refresh()
-		
 		newEff.anims[0] = animInfo
-		newEff.curAnim = 0
 		
 	else
 	
 		newEff.hasAnim = false
-		newEff.anims[0] = { name="none", loop=false , fps=0 , fSize = point(newEff.img:getWidth(), newEff.img:getHeight()), fCount = point(0,0), tFrames = 0}
-		newEff.curAnim = 0
+		newEff.anims[0] = { name="none", loop=false , fps=0 , fSize = point(newEff.img:getWidth(), newEff.img:getHeight()), fCount = point(1,1), tFrames = 1}
+
+		newEff.img = love.graphics.newImage(love.image.newImageData(animInfo.fSize.x, animInfo.fSize.y))
+		newEff.imgData = newEff.img:getData()
+
+		newEff.imgData:paste(newEff.srcImgData, 0,0, 0,0, animInfo.fSize.x, animInfo.fSize.y)
+		newEff.img:refresh()
 		
 	end
+	
+	newEff.curAnim = 0
 	
 	newEff.index = effect.curIndex
 	effect.effects[effect.curIndex] = newEff
@@ -122,24 +144,37 @@ end
 
 function effect:doAnim()
 	
-	fDelta = love.timer.getTime() - self.anims[self.curAnim].lastFrameTime
+	local fDelta = love.timer.getTime() - self.anims[self.curAnim].lastFrameTime
 	
-	if fDelta > self.anims[self.curAnim].timePerFrame then
-		frameAdvance = math.ceil(fDelta / self.anims[self.curAnim].timePerFrame)
-		self.anims[self.curAnim].curFrame = self.anims[self.curAnim].curFrame + 1
-		if self.anims[self.curAnim].curFrame > (self.anims[self.curAnim].tCount - 1) then
+	if fDelta == 0 then return end
+	if fDelta >= self.anims[self.curAnim].timePerFrame then
+	
+		frameAdvance = math.floor(fDelta / self.anims[self.curAnim].timePerFrame)
+		print("frameAdvance: " .. tostring(frameAdvance))
+		self.anims[self.curAnim].curFrame = self.anims[self.curAnim].curFrame + frameAdvance
+		print("curFrame: " .. tostring(self.anims[self.curAnim].curFrame))
+		print("tFrames: " .. tostring(self.anims[self.curAnim].tFrames))
+		if self.anims[self.curAnim].curFrame > (self.anims[self.curAnim].tFrames) then
+			print("curFrame over limit")
 			if self.anims[self.curAnim].loop then
-				self.anims[self.curAnim].curFrame = self.anims[self.curAnim].curFrame - self.anims[self.curAnim].tCount
+				print("Loops")
+				self.anims[self.curAnim].curFrame = self.anims[self.curAnim].curFrame - self.anims[self.curAnim].tFrames
+				print("curFrame: " .. tostring(self.anims[self.curAnim].curFrame))
+				
 			else
+				print("anim over")
 				self.hasAnim = false
 				effect.effects[self.index] = nil
 			end
 		end
 		
-		self.anims[self.curAnim].fRow = math.floor(self.anims[self.curAnim].curFrame / self.anims[self.curAnim].fCount.y);
-		self.anims[self.curAnim].fCol = math.floor(self.anims[self.curAnim].curFrame % self.anims[self.curAnim].fCount.x);
+		self.anims[self.curAnim].fRow = math.floor(self.anims[self.curAnim].curFrame / self.anims[self.curAnim].fCount.x)
+		self.anims[self.curAnim].fCol = math.floor(self.anims[self.curAnim].curFrame % self.anims[self.curAnim].fCount.x)
 		
-		self.imgData:paste(self.srcImgData, 0,0, self.anims[self.curAnim].fCol * self.anims[self.curAnim].fSize.x, self.anims[self.curAnim].fRow * self.anims[self.curAnim].fSize.x, self.anims[self.curAnim].fSize.x, self.anims[self.curAnim].fSize.y)
+		print("fRow: " .. tostring(self.anims[self.curAnim].fRow))
+		print("fCol: " .. tostring(self.anims[self.curAnim].fCol))
+		
+		self.imgData:paste(self.srcImgData, 0,0, self.anims[self.curAnim].fCol * self.anims[self.curAnim].fSize.x, self.anims[self.curAnim].fRow * self.anims[self.curAnim].fSize.y, self.anims[self.curAnim].fSize.x, self.anims[self.curAnim].fSize.y)
 		self.img:refresh()
 		self.anims[self.curAnim].lastFrameTime = love.timer.getTime()
 	end
@@ -160,14 +195,14 @@ end
 
 function effect:draw()
 	
-	if self.hasAnim then
-		self:doAnim()
-	end
-	
 	if self.visible then
-		self.pos = self.pos + self.vel
-		--love.graphics.draw(self.img, self.pos.x, self.pos.y, math.rad(self.angle),self.scale,self.scale,(self.anims[self.curAnim].fSize.x  * self.scale), (self.anims[self.curAnim].fSize.y * self.scale))
+		if self.hasAnim then
+			self:doAnim()
+		end
+		drawDelta = love.timer.getTime() - self.lastDraw
+		self.pos = self.pos + (self.vel * drawDelta)
 		love.graphics.draw(self.img, self.pos.x, self.pos.y, math.rad(self.angle),self.scale,self.scale,(self.anims[self.curAnim].fSize.x  ) * 0.5, (self.anims[self.curAnim].fSize.y ) * 0.5)
+		self.lastDraw = love.timer.getTime()
 	end
 	
 	if (love.timer.getTime() - self.created) > self.ttl then
