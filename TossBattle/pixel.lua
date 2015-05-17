@@ -197,12 +197,19 @@ function pixel:move()
 			self.pos = self.pos + (self.vel * simDelta)
 		end
 	end
-
+	
+	if (self.pos.x < 0 and  self.vel.x < 0) or 
+	   (self.pos.x > pixel.imgData:getWidth() and  self.vel.x > 0) then
+		self:destroy()
+		return
+	end
+	
 	if (self.vel:closerThan(point(0,0), 3)) then
 		
 		if self.notMoving then
 			if love.timer.getTime() - self.deadTimer > 0.5 then
 				self:destroy()
+				return
 			end
 		else
 			self.deadTimer = love.timer.getTime()

@@ -58,7 +58,9 @@ function effect.new(effName, position, velocity, dispImage, timeToLive, animInfo
 	newEff.name = effName
 	newEff.pos = position
 	newEff.vel = velocity
+	newEff.angVel = 0
 	newEff.img = dispImage
+	
 	newEff.angle = 0
 	newEff.scale = 1
 	newEff.isDead = false
@@ -75,14 +77,16 @@ function effect.new(effName, position, velocity, dispImage, timeToLive, animInfo
 		-- setup images
 		newEff.srcImgData = dispImage:getData()
 		
-		-- passed info animInfo{ name=, loop= , fps= , fCount = , tFrames = }
+		-- passed info animInfo{ name=, loop= , fps= , fCount = , tFrames = , startFrame= , endFrame= }
 		
 		animInfo.index = 0
+		animInfo.startFrame = animInfo.startFrame or 0
 		animInfo.fSize = point(math.floor(newEff.srcImgData:getWidth() / animInfo.fCount.x), math.floor(newEff.srcImgData:getHeight() / animInfo.fCount.y))
 		animInfo.curFrame = animInfo.curFrame or 0
 		animInfo.tFrames = animInfo.tFrames or (animInfo.fCount.x * animInfo.fCount.y)
 		animInfo.lastFrameTime = love.timer.getTime()
 		animInfo.timePerFrame = 1 / animInfo.fps
+		animInfo.endFrame = animInfo.endFrame or animInfo.tFrames
 		animInfo.fRow = math.floor(animInfo.curFrame / animInfo.fCount.x);
 		animInfo.fCol = math.floor(animInfo.curFrame % animInfo.fCount.x);
 		
@@ -96,13 +100,9 @@ function effect.new(effName, position, velocity, dispImage, timeToLive, animInfo
 	else
 	
 		newEff.hasAnim = false
-		newEff.anims[0] = { name="none", loop=false , fps=0 , fSize = point(newEff.img:getWidth(), newEff.img:getHeight()), fCount = point(1,1), tFrames = 1}
-
-		newEff.img = love.graphics.newImage(love.image.newImageData(animInfo.fSize.x, animInfo.fSize.y))
+		newEff.anims[0] = { name="none", loop=false , fps=0 , fSize = point(newEff.img:getWidth(), newEff.img:getHeight()), fCount = point(1,1), tFrames = 1, lastFrameTime = love.timer.getTime()}
+		
 		newEff.imgData = newEff.img:getData()
-
-		newEff.imgData:paste(newEff.srcImgData, 0,0, 0,0, animInfo.fSize.x, animInfo.fSize.y)
-		newEff.img:refresh()
 		
 	end
 	
@@ -150,19 +150,19 @@ function effect:doAnim()
 	if fDelta >= self.anims[self.curAnim].timePerFrame then
 	
 		frameAdvance = math.floor(fDelta / self.anims[self.curAnim].timePerFrame)
-		print("frameAdvance: " .. tostring(frameAdvance))
+		--print("frameAdvance: " .. tostring(frameAdvance))
 		self.anims[self.curAnim].curFrame = self.anims[self.curAnim].curFrame + frameAdvance
-		print("curFrame: " .. tostring(self.anims[self.curAnim].curFrame))
-		print("tFrames: " .. tostring(self.anims[self.curAnim].tFrames))
+		--print("curFrame: " .. tostring(self.anims[self.curAnim].curFrame))
+		--print("tFrames: " .. tostring(self.anims[self.curAnim].tFrames))
 		if self.anims[self.curAnim].curFrame > (self.anims[self.curAnim].tFrames) then
-			print("curFrame over limit")
+			--print("curFrame over limit")
 			if self.anims[self.curAnim].loop then
-				print("Loops")
+				--print("Loops")
 				self.anims[self.curAnim].curFrame = self.anims[self.curAnim].curFrame - self.anims[self.curAnim].tFrames
-				print("curFrame: " .. tostring(self.anims[self.curAnim].curFrame))
+				--print("curFrame: " .. tostring(self.anims[self.curAnim].curFrame))
 				
 			else
-				print("anim over")
+				--print("anim over")
 				self.hasAnim = false
 				effect.effects[self.index] = nil
 			end
@@ -171,8 +171,8 @@ function effect:doAnim()
 		self.anims[self.curAnim].fRow = math.floor(self.anims[self.curAnim].curFrame / self.anims[self.curAnim].fCount.x)
 		self.anims[self.curAnim].fCol = math.floor(self.anims[self.curAnim].curFrame % self.anims[self.curAnim].fCount.x)
 		
-		print("fRow: " .. tostring(self.anims[self.curAnim].fRow))
-		print("fCol: " .. tostring(self.anims[self.curAnim].fCol))
+		--print("fRow: " .. tostring(self.anims[self.curAnim].fRow))
+		--print("fCol: " .. tostring(self.anims[self.curAnim].fCol))
 		
 		self.imgData:paste(self.srcImgData, 0,0, self.anims[self.curAnim].fCol * self.anims[self.curAnim].fSize.x, self.anims[self.curAnim].fRow * self.anims[self.curAnim].fSize.y, self.anims[self.curAnim].fSize.x, self.anims[self.curAnim].fSize.y)
 		self.img:refresh()

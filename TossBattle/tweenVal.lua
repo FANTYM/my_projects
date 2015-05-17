@@ -54,11 +54,18 @@ function tweenVal:update()
 	self.curVal = (self.startVal * (1 - self.percent)) + (self.endVal * (self.percent))
 	
 	if self.lBound then
-		if self.curVal < self.lBound then self.curVal = self.lBound end
+		if self.curVal < self.lBound then 
+			self.curVal = self.lBound 
+			--self = self.lBound
+		end
 	end
 	
 	if self.uBound then
-		if self.curVal > self.uBound then self.curVal = self.uBound end
+		if self.curVal > self.uBound then 
+			self.curVal = self.uBound 
+			--self = self.uBound
+		end
+		
 	end
 	
 end

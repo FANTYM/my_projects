@@ -163,8 +163,7 @@ function love.draw()
 		
 		love.graphics.draw( sky    , viewInfo.pos.x(), viewInfo.pos.y(), 0, 1, 1, 0, 0, 0, 0)
 		love.graphics.draw( terrain, viewInfo.pos.x(), viewInfo.pos.y(), 0, 1, 1, 0, 0, 0, 0)
-		--love.graphics.draw( pixels.pixLayer, viewInfo.pos.x(), viewInfo.pos.y(), 0, 1, 1, 0, 0, 0, 0 )
-		pixel.drawPixels()
+		
 		
 		for _, ply in pairs(players) do
 			
@@ -173,6 +172,9 @@ function love.draw()
 		end
 		
 		ents.draw()
+		
+		pixel.drawPixels()
+
 		
 		Flash.drawFlashes()
 		
@@ -310,7 +312,7 @@ function love.update(dt)
 		
 		if keys["up"] and (keyDelta >= (keyRate * 4)) then
 						
-			players[1].angle = players[1].angle - 5
+			players[1].angle = players[1].angle - 1
 			if players[1].angle < -90 then
 				players[1].angle = -90
 			end
@@ -322,7 +324,7 @@ function love.update(dt)
 		
 		if keys["down"] and (keyDelta >= (keyRate * 4))  then
 			
-			players[1].angle = players[1].angle + 5
+			players[1].angle = players[1].angle + 1
 			if players[1].angle > 90 then
 				players[1].angle = 90
 			end
@@ -333,10 +335,7 @@ function love.update(dt)
 		
 		if (mouse["l"] and mouse["l"].down) and (keyDelta >= (keyRate * 4)) then
 			
-			--effect.new(effName, position, velocity, dispImage, timeToLive, animInfo)
-			--effect.new("test", mouse.pos, mouse.delta, love.graphics.newImage("explosion.png"), 5, {fCount = 13, fSize = point(196,196), fps = 7})
-			---effect.new("test3", mouse.pos, point(0,-20), love.graphics.newImage("explosion.png"), -1, {fSize = point(196,196), fps = 13})
-			effect.new("test3", mouse.pos, point(0,-20), love.graphics.newImage("explosion.png"), -1, {name = "", fCount = point(13,1), fps = 16, loop = false})
+			effect.new("test3", mouse.pos, point(0,-20), explosion, -1, {name = "", fCount = point(13,1), fps = 20, loop = false})
 			
 			keyTimer = love.timer.getTime()		
 			
@@ -412,9 +411,9 @@ end
 function fireShot(ply)
 	
 	shotPos = ply.pos + point(math.sin(math.rad(-ply.angle)) * -16, math.cos(math.rad(-ply.angle)) * -16)
-	newShot = ents.newEntity("testShot" .. tostring(math.random()), shotPos, (shotPos - ply.pos):getNormal() * ply.power , 20, basicShot, 8, function() end, 
+	newShot = ents.newEntity("testShot" .. tostring(math.random()), shotPos, (shotPos - ply.pos):getNormal() * ply.power, basicShot, nil, function() end, 
 			function(self)
-				doExplosion(self.pos, self.cRadius * 3, ply.power * self.mass, self.vel)
+				doExplosion(self.pos, self.cRadius * 2, newShot.mass * 3, self.vel)
 			end)
 			newShot:setScale(0.25)
 
@@ -426,9 +425,7 @@ function doExplosion(where, radius, power, hitVel)
 	pixelCount = 0
 	destroyPerc = 0.6
 	deadCount = 0
-	--terrainScan:setLBounds(where - point(radius * 2,radius * 2))
-	--terrainScan:setUBounds(where + point(radius * 2,radius * 2))
-	thisBoom = effect.new("exp" .. tostring(where), where, hitVel, explosion, -1, {name = "", fCount = point(13,1), fps = 16, loop = false})
+	thisBoom = effect.new("exp" .. tostring(where), where, hitVel, explosion, -1, {name = "", fCount = point(13,1), fps = 20, loop = false})
 	thisBoom:setScale(0.5)
 	for y = -radius, radius do
 		for x = -radius, radius do

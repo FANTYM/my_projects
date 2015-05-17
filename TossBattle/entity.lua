@@ -41,25 +41,66 @@ function entity:getPenDist(ent2)
 
 end
 
-
-function entity.new(entName, position, velocity, mass, dispImage, collisionRadius, thinkFunction, collideFunction)
+function entity.new(entName, position, velocity, dispImage, animInfo, thinkFunction, collideFunction)
 
 	local newEnt = {}
 	setmetatable(newEnt, entity)
 	newEnt.name = entName
-	newEnt.think = thinkFunction
-	newEnt.collide = collideFunction
+	newEnt.gravity = point(0,20)
+	newEnt.pThink = thinkFunction
+	newEnt.pCollide = collideFunction
 	newEnt.pos = position
 	newEnt.vel = velocity
 	newEnt.cRadius = collisionRadius
 	newEnt.img = dispImage
+	newEnt.imgData = newEnt.img:getData()
+	newEnt.anims = {}
+	newEnt.curAnim = 0
+	if animInfo then
+		
+		newEnt.hasAnim = true
+	-- setup images
+		newEnt.srcImgData = dispImage:getData()
+		
+		-- passed info animInfo{ name=, loop= , fps= , fCount = , tFrames = }
+		
+		animInfo.index = 0
+		animInfo.fSize = point(math.floor(newEnt.srcImgData:getWidth() / animInfo.fCount.x), math.floor(newEnt.srcImgData:getHeight() / animInfo.fCount.y))
+		animInfo.curFrame = animInfo.curFrame or 0
+		animInfo.tFrames = animInfo.tFrames or (animInfo.fCount.x * animInfo.fCount.y)
+		animInfo.lastFrameTime = love.timer.getTime()
+		animInfo.timePerFrame = 1 / animInfo.fps
+		animInfo.fRow = math.floor(animInfo.curFrame / animInfo.fCount.x);
+		animInfo.fCol = math.floor(animInfo.curFrame % animInfo.fCount.x);
+		
+		newEnt.img = love.graphics.newImage(love.image.newImageData(animInfo.fSize.x, animInfo.fSize.y))
+		newEnt.imgData = newEnt.img:getData()
+		
+		newEnt.imgData:paste(newEnt.srcImgData, 0,0, animInfo.fCol * animInfo.fSize.x, animInfo.fRow * animInfo.fSize.y, animInfo.fSize.x, animInfo.fSize.y)
+		newEnt.img:refresh()
+		newEnt.anims[0] = animInfo
+		
+	else
+	
+		newEnt.hasAnim = false
+		newEnt.anims[0] = { name="none", loop=false , fps=0 , fSize = point(newEnt.img:getWidth(), newEnt.img:getHeight()), fCount = point(1,1), tFrames = 1, lastFrameTime = love.timer.getTime()}
+		
+		
+	end
+	
 	newEnt.angle = 0
+	newEnt.angVel = point(0,0)
 	newEnt.scale = 1
-	newEnt.mass = mass
+	newEnt.mass = (newEnt.anims[0].fSize.x * newEnt.anims[0].fSize.y) * 0.9
+	newEnt.cRadius = (newEnt.anims[0].fSize.x + newEnt.anims[0].fSize.y) * 0.5
+	newEnt.inertia = 0
+	newEnt.torque = 0
 	newEnt.friction = 0.95
 	newEnt.isDead = false
 	newEnt.deadTimer = love.timer.getTime()
 	newEnt.visible = true
+	newEnt.attachedEnts = {}
+	newEnt.aabb = {top= -(newEnt.anims[0].fSize.y * 0.5), left=-(newEnt.anims[0].fSize.x * 0.5) , bottom=(newEnt.anims[0].fSize.y * 0.5) , right=(newEnt.anims[0].fSize.x * 0.5) }
 
 	return newEnt
 
@@ -91,12 +132,78 @@ function entity:reColor(oldColor, newColor)
 	
 end
 
+function entity:think()
+
+
+	self.vel = self.vel + (self.gravity * thinkDelta)
+	self.pos = self.pos + (self.vel * thinkDelta)
+	
+	if self.pThink then
+		self:pThink()
+	end
+	
+
+end
+
+function entity:collide(colEnt)
+
+	if self.pCollide then
+		self:pCollide(colEnt)
+	end
+	
+end
+
 
 function entity:draw()
 
 	if self.visible then
-		love.graphics.draw(self.img, self.pos.x, self.pos.y, math.rad(self.angle),self.scale,self.scale,self.cRadius * self.scale, self.cRadius * self.scale)
+		if self.hasAnim then
+			self:doAnim()
+		end
+		--love.graphics.draw(self.img, self.pos.x, self.pos.y, math.rad(self.angle),self.scale,self.scale,self.cRadius * self.scale, self.cRadius * self.scale)
+		love.graphics.draw(self.img, self.pos.x, self.pos.y, math.rad(self.angle),self.scale,self.scale,(self.anims[self.curAnim].fSize.x  ) * 0.5, (self.anims[self.curAnim].fSize.y ) * 0.5)
 	end
+	
+
+end
+
+function entity:doAnim()
+	
+	local fDelta = love.timer.getTime() - self.anims[self.curAnim].lastFrameTime
+	
+	if fDelta == 0 then return end
+	if fDelta >= self.anims[self.curAnim].timePerFrame then
+	
+		frameAdvance = math.floor(fDelta / self.anims[self.curAnim].timePerFrame)
+		--print("frameAdvance: " .. tostring(frameAdvance))
+		self.anims[self.curAnim].curFrame = self.anims[self.curAnim].curFrame + frameAdvance
+		--print("curFrame: " .. tostring(self.anims[self.curAnim].curFrame))
+		--print("tFrames: " .. tostring(self.anims[self.curAnim].tFrames))
+		if self.anims[self.curAnim].curFrame > (self.anims[self.curAnim].tFrames) then
+			--print("curFrame over limit")
+			if self.anims[self.curAnim].loop then
+				--print("Loops")
+				self.anims[self.curAnim].curFrame = self.anims[self.curAnim].curFrame - self.anims[self.curAnim].tFrames
+				--print("curFrame: " .. tostring(self.anims[self.curAnim].curFrame))
+				
+			else
+				--print("anim over")
+				self.hasAnim = false
+				effect.effects[self.index] = nil
+			end
+		end
+		
+		self.anims[self.curAnim].fRow = math.floor(self.anims[self.curAnim].curFrame / self.anims[self.curAnim].fCount.x)
+		self.anims[self.curAnim].fCol = math.floor(self.anims[self.curAnim].curFrame % self.anims[self.curAnim].fCount.x)
+		
+		--print("fRow: " .. tostring(self.anims[self.curAnim].fRow))
+		--print("fCol: " .. tostring(self.anims[self.curAnim].fCol))
+		
+		self.imgData:paste(self.srcImgData, 0,0, self.anims[self.curAnim].fCol * self.anims[self.curAnim].fSize.x, self.anims[self.curAnim].fRow * self.anims[self.curAnim].fSize.y, self.anims[self.curAnim].fSize.x, self.anims[self.curAnim].fSize.y)
+		self.img:refresh()
+		self.anims[self.curAnim].lastFrameTime = love.timer.getTime()
+	end
+	
 	
 
 end
