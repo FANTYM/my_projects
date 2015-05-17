@@ -183,26 +183,24 @@ function effect:doAnim()
 
 end
 
-function effect.drawEffects()
+function effect.drawEffects(drawDelta)
 	
 	for k, eff in pairs(effect.effects) do
 		
-		eff:draw()
+		eff:draw(drawDelta)
 		
 	end
 
 end
 
-function effect:draw()
+function effect:draw(drawDelta)
 	
 	if self.visible then
 		if self.hasAnim then
 			self:doAnim()
 		end
-		drawDelta = love.timer.getTime() - self.lastDraw
 		self.pos = self.pos + (self.vel * drawDelta)
 		love.graphics.draw(self.img, self.pos.x, self.pos.y, math.rad(self.angle),self.scale,self.scale,(self.anims[self.curAnim].fSize.x  ) * 0.5, (self.anims[self.curAnim].fSize.y ) * 0.5)
-		self.lastDraw = love.timer.getTime()
 	end
 	
 	if (love.timer.getTime() - self.created) > self.ttl then

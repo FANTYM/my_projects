@@ -23,11 +23,11 @@ function Cycler.new(rate, startValue, lowerBound, upperBound, loop, goingUp)
 	
 end
 
-function Cycler.runCycles()
+function Cycler.runCycles(updateDelta)
 	
 	for k,v in pairs(Cycler.cyclers) do
 		
-		v:think()
+		v:think(updateDelta)
 	
 	end
 
@@ -47,10 +47,10 @@ function Cycler:getValue()
 	
 end
 
-function Cycler:think()
+function Cycler:think(updateDelta)
 	
-	local deltaTime = love.timer.getTime() - self.lastRun
-	self.lastRun = love.timer.getTime()
+	local deltaTime = updateDelta--love.timer.getTime() - self.lastRun
+	--self.lastRun = love.timer.getTime()
 	
 	if self.cycle then
 		if self.goingUp then

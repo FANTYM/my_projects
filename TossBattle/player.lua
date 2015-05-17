@@ -40,13 +40,14 @@ function player.new(plyName, plyPos, plyColor)
 	nPly.barrelEnt = entity.new(plyName .. "_barrel", plyPos, point(0,0), nPly.barrelImg,nil, function() end, function() end)
 	nPly.barrelEnt:reColor(Color(255,255,255,255), nPly.color)
 	
-	return nPly
+	return ents.addEnt(nPly)
 
 end
 
-function player:think(thinkDelta)
+function player:think()
 	
-	
+	thinkDelta = love.timer.getTime() - self.lastThink
+
 	
 	self.vel = self.vel + (self.gravity * thinkDelta)
 	self.treadEnt.vel = self.vel
@@ -61,35 +62,29 @@ function player:think(thinkDelta)
 	colCheckPos = self.pos + (self.vel:getNormal() * self.cRadius)
 	if pixel.inImage(nil, colCheckPos) then
 				
-			r,g,b,a = pixel.imgData:getPixel(colCheckPos.x, colCheckPos.y)
-			--print(a)
-			if a > 250 then
-				
-				self.vel = (self.gravity * -1) * thinkDelta
-				self.pos = self.pos + self.vel
-				
-				
-			end
-		
+		r,g,b,a = pixel.imgData:getPixel(colCheckPos.x, colCheckPos.y)
+		--print(a)
+		if a > 250 then
+			
+			self.vel = (self.gravity * -1) * thinkDelta
+			self.pos = self.pos + self.vel
+			
+			
 		end
 	
-end
-
-function player:draw()
-	
-	thinkDelta = love.timer.getTime() - self.lastThink
-	if  thinkDelta > 0.05 then
-		
-		self:think(thinkDelta)
-		self.lastThink = love.timer.getTime()
-		
 	end
+	
+	self.lastThink = love.timer.getTime()
+	
+end
+	
+function player:draw(drawDelta)
 	
 	
 	self.barrelEnt.angle = self.angle
-	self.barrelEnt:draw()
-	self.treadEnt:draw()
-	self.bodyEnt:draw()
+	self.barrelEnt:draw(drawDelta)
+	self.treadEnt:draw(drawDelta)
+	self.bodyEnt:draw(drawDelta)
 	
 
 end

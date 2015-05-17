@@ -19,6 +19,16 @@ function ents.newEntity(entName, position, velocity,  dispImage, animInfo, think
 	return newEnt
 	
 end
+
+function ents.addEnt(ent)
+
+	ent.id = ents.nextID
+	ents.entList[ents.nextID] = ent
+	ents.nextID = ents.nextID + 1
+	
+	return ent
+
+end
 	
 function ents.resolveCollision(ent1, ent2)
 
@@ -127,13 +137,13 @@ function ents.remove(eInfo)
 	
 end
 
-function ents.draw()
+function ents.draw(drawDelta)
 
 	for k, ent in pairs(ents.entList) do 
 		
 		if not (ent == nil) then
 			
-			ent:draw()
+			ent:draw(drawDelta)
 			
 		end
 	
@@ -224,16 +234,16 @@ function ents.CollisionResponse(coeffOfRest, ent1, ent2, colPos)
 --}
 end
 
-function ents.think()
+function ents.think(updateDelta)
 	
-	local thinkDelta = love.timer.getTime() - ents.lastThink
-	ents.lastThink = love.timer.getTime()
+	local thinkDelta = updateDelta --love.timer.getTime() - ents.lastThink
+	--ents.lastThink = love.timer.getTime()
 	
 	for k, ent in pairs(ents.entList) do 
 		
 		if not (ent == nil) then
 		
-			ent:think()
+			ent:think(updateDelta)
 				
 			colCheckPos = ent.pos + (ent.vel:getNormal() * ent.cRadius)
 			
@@ -250,9 +260,6 @@ function ents.think()
 				end
 			
 			end
-			
-		
-			
 			
 			if ent.vel:closerThan(point(0,0), 0.25) then
 				

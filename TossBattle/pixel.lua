@@ -85,13 +85,13 @@ function pixel.getFromMap(pos)
 	
 end
 
-function pixel.movePixels()
+function pixel.movePixels(updateDelta)
 	
 	--if love.timer.getTime() - pixel.lastSimTime > pixel.minSimTime then
 		--pixel.lastSimTime = love.timer.getTime()
 		for k, pxl in pairs(pixel.pixels) do
 			if not (pxl == nil) then
-				pxl:move()
+				pxl:move(updateDelta)
 			end
 		end
 	--end
@@ -168,10 +168,10 @@ function pixel:getDispPos()
 
 end
 
-function pixel:move()
+function pixel:move(updateDelta)
 	
 	--imgData = pixel.image:getData()
-	simDelta = love.timer.getTime() - self.lastSim
+	simDelta = updateDelta --love.timer.getTime() - self.lastSim
 	if self:inImage(self:getDispPos()) then 
 		pixel.clearMapPos(self)
 	end
@@ -220,7 +220,7 @@ function pixel:move()
 		pixel.putInMap(self)
 	end
 	
-	self.lastSim = love.timer.getTime()
+	--self.lastSim = love.timer.getTime()
 	
 end
 

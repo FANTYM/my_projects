@@ -132,7 +132,7 @@ function entity:reColor(oldColor, newColor)
 	
 end
 
-function entity:think()
+function entity:think(thinkDelta)
 
 
 	self.vel = self.vel + (self.gravity * thinkDelta)
@@ -154,7 +154,7 @@ function entity:collide(colEnt)
 end
 
 
-function entity:draw()
+function entity:draw(drawDelta)
 
 	if self.visible then
 		if self.hasAnim then

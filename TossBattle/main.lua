@@ -29,7 +29,13 @@ avgFPS = 0
 curPly = 1
 doDrop = false
 
+physFPS = 100
+physFPSStep = 1 / physFPS
+physAccum = 0
+physMax = physFPSStep * 1.5
+
 keyTimer = love.timer.getTime()
+mouseTimer = love.timer.getTime()
 updateTimer = love.timer.getTime()
 drawTimer = love.timer.getTime()
 fpsTimer = love.timer.getTime()
@@ -130,24 +136,15 @@ end
 
 function love.draw()
 	
-	drawTimer = love.timer.getTime()
 	drawDelta = love.timer.getTime() - drawTimer
-	
-	fpsCount = fpsCount + 1
-	if love.timer.getTime() - fpsTimer >= 1 then
-		curFPS = fpsCount - 1
-		avgFPS = (avgFPS + curFPS) * 0.5
-		fpsCount = 1
-		fpsTimer = love.timer.getTime()
-	end
-	
+
 	if gameStates.curState == gameStates.MENU then
-		
-		--font = love.graphics.getFont()
+	
 		love.graphics.setFont(titleFont)
 		love.graphics.setColor(255,255,255,255)
 		love.graphics.print(gameTitle, (screenSize.x * 0.5) - (titleFont:getWidth(gameTitle) * 0.5), (screenSize.y * 0.5) - (titleFont:getHeight(gameTitle)))
 		love.graphics.print("Press [Enter] to play", (screenSize.x * 0.5) - (titleFont:getWidth("Press [Enter] to play") * 0.5), (screenSize.y * 0.5) + (titleFont:getHeight(gameTitle)))
+		effect.drawEffects(drawDelta)
 		
 	elseif gameStates.curState == gameStates.TERRAIN then
 		
@@ -156,83 +153,71 @@ function love.draw()
 		love.graphics.setColor(255,255,255,255)
 		love.graphics.print(terrainText, (screenSize.x * 0.5) - (titleFont:getWidth(terrainText) * 0.5), (screenSize.y * 0.5) - ((titleFont:getHeight(terrainText) * 2)))
 		love.graphics.print("-..Please Wait..-", (screenSize.x * 0.5) - (titleFont:getWidth("-..Please Wait..-") * 0.5), (screenSize.y * 0.5) + (titleFont:getHeight(terrainText)))
+		effect.drawEffects(drawDelta)
 	
 	elseif gameStates.curState == gameStates.PLAY then
-	
 		love.graphics.setColor(255,255,255,255)		
-		
 		love.graphics.draw( sky    , viewInfo.pos.x(), viewInfo.pos.y(), 0, 1, 1, 0, 0, 0, 0)
 		love.graphics.draw( terrain, viewInfo.pos.x(), viewInfo.pos.y(), 0, 1, 1, 0, 0, 0, 0)
-		
-		
+
 		for _, ply in pairs(players) do
-			
-			ply:draw()
-			
+			ply:draw(drawDelta)
 		end
 		
-		ents.draw()
-		
-		pixel.drawPixels()
-
-		
-		Flash.drawFlashes()
+		ents.draw(drawDelta)
+		pixel.drawPixels(drawDelta)
+		Flash.drawFlashes(drawDelta)
+		effect.drawEffects(drawDelta)
 		
 	elseif gameStates.curState == gameStates.SCORES then
-		
+
 		font = love.graphics.getFont()
 		
 		love.graphics.setColor(255 * textCycler:getValue() ,255 * (1 - textCycler:getValue()), 128 + (127 * textCycler:getValue()),255)
 		love.graphics.print("Game Over", (screenSize.x * 0.5) - (font:getWidth("Game Over") * 0.5), 200)
 		love.graphics.print("Press [Enter] to return to the menu", (screenSize.x * 0.5) - (font:getWidth("Press [Enter] to return to the menu") * 0.5), 330)
 		
+		effect.drawEffects(drawDelta)
+		
 	end
 	
-	effect.drawEffects()
+	drawTimer = love.timer.getTime()
 
 end
 
 
-function love.update(dt)
+function love.update(loveDelta)
 
 	curTime = love.timer.getTime()
-	utDelta = love.timer.getTime() - updateTimer
+	updateDelta = love.timer.getTime() - updateTimer
 	keyDelta = curTime - keyTimer
+	mouseDelta = curTime - mouseTimer
 	
-	if utDelta > 1 then 
-		updateTimer = love.timer.getTime()
-		return
-	end
+	physAccum = physAccum + updateDelta
 
-	if keys["escape"] then os.exit() end
+	if physAccum > physMax then physAccum = physMax end
 	
-	Cycler.runCycles()
-	pixel.movePixels()
-	ents.think()
+	if keys["escape"] then os.exit() end
 	
 	if gameStates.curState == gameStates.MENU then
 	
-		if keys["return"] and utDelta > 0.5 then
+		if keys["return"] then
 			gameStates.curState = gameStates.TERRAIN
-			
 		end
 		
-		if (mouse["l"] and mouse["l"].down) and (keyDelta >= (keyRate * 4)) then
-			
-			--effect.new(effName, position, velocity, dispImage, timeToLive, animInfo)
-			--thisEff = effect.new("test", mouse.pos, point(0,0), love.graphics.newImage("explosion.png"), 0.75, {fCount = 13, fSize = point(196,196), fps = 17})
+		if (mouse["l"] and mouse["l"].down) and (mouseDelta >= 0.5) then
 			thisEff = effect.new("test", mouse.pos, point(0,0), tankFire, 5, {name = "", fCount = point(8,8), fps = 16, loop = false})
 			thisEff.pos = thisEff.pos - point(0,64)
 			keyTimer = love.timer.getTime()		
-			
 		end
 	
 	elseif gameStates.curState == gameStates.TERRAIN then
+
 		generateTerrain()
-		--screenTween = tweenVal(0, -screenSize.x, 1)
 		playerOne = player.new("Fantym", point(50,200), Color(255,0,0,255))
 		players[curPly] = playerOne
 		gameStates.curState = gameStates.PLAY
+		
 	elseif gameStates.curState == gameStates.PLAY then
 		
 		terrainDelta = love.timer.getTime() - lastTerrain
@@ -243,102 +228,78 @@ function love.update(dt)
 		
 		end
 		
-		--terrainScan:run()
+		if physAccum > physFPSStep then
+			Cycler.runCycles(physFPSStep)
+			pixel.movePixels(physFPSStep)
+			ents.think(physFPSStep)
+			physAccum = physAccum - physFPSStep
+		end
 		
-		--if (doDrop)then
-			--doDrop = false
-			--tHeight = tData:getHeight()
-			--function dropIt(x,y,r,g,b,a)
-				
-				--if y + 1 < tHeight then
-					--nR,nG,nB,nA = tData:getPixel(x, y + 1)
-					--print(nA)
-					--if (nA == 0) and (a > 250) then
-						--pixel(point(x,y), point(0,0))
-						--print("making pixel")
---						return r,g,b,0
-					--end
-				--end
-				
-				--return r,g,b,a 				
-				
-			--end
-			
-			--tData:mapPixel(dropIt)
-			--lastTerrain = love.timer.getTime()
-		
-		
-		--end
+		-- Increase Power
 		if (keys["kp+"] or (keys["="] and (keys["lshift"] or keys["rshift"]) ) ) and (keyDelta >= keyRate) then
-			keyTimer = love.timer.getTime()		
 			players[curPly].power = players[curPly].power + 1
 			if players[curPly].power > players[curPly].maxPower then
 				players[curPly].power = players[curPly].maxPower
 			end
+			keyTimer = love.timer.getTime()		
 		end
 		
+		-- Decrease Power
 		if (keys["kp-"] or keys["-"]) and (keyDelta >= keyRate) then
-			keyTimer = love.timer.getTime()		
 			players[curPly].power = players[curPly].power - 1
 			if players[curPly].power < 0 then
 				players[curPly].power = 0
 			end
+			keyTimer = love.timer.getTime()
+		end
+		-- Fire!!!
+		if keys[" "] and (keyDelta >= 0.5) then
+			fireShot(players[curPly])
+			keyTimer = love.timer.getTime()		
 		end
 		
-		if keys[" "] and (keyDelta >= (keyRate * 5)) then
-			keyTimer = love.timer.getTime()		
-			fireShot(players[curPly])
-		end
-
+		-- Scroll View Right
 		if keys["left"] and (keyDelta >= (keyRate * 3)) then
 			moveRate = (moveRate + 25)
-			
 			viewInfo:setPos(viewInfo.pos + point(moveRate,0))
-			
 			keyTimer = love.timer.getTime()
 		else
 			moveRate = moveRate  * 0.999
 		end
 		
+		-- Scroll View Left
 		if keys["right"] and (keyDelta >= (keyRate * 3))  then
 			moveRate = (moveRate - 25)
-			
 			viewInfo:setPos(viewInfo.pos + point(moveRate,0))
-			
 			keyTimer = love.timer.getTime()		
 		else
 			moveRate = moveRate  * 0.999
 		end
 		
+		-- Decrease Angle of shot
 		if keys["up"] and (keyDelta >= (keyRate * 4)) then
-						
 			players[1].angle = players[1].angle - 1
 			if players[1].angle < -90 then
 				players[1].angle = -90
 			end
 			print(players[1].angle)
-		
 			keyTimer = love.timer.getTime()
-			
 		end
 		
+		-- Increase Angle of shot
 		if keys["down"] and (keyDelta >= (keyRate * 4))  then
-			
 			players[1].angle = players[1].angle + 1
 			if players[1].angle > 90 then
 				players[1].angle = 90
 			end
 			print(players[1].angle)
-
 			keyTimer = love.timer.getTime()		
 		end
 		
+		-- Test mouse click, makes explosion effect
 		if (mouse["l"] and mouse["l"].down) and (keyDelta >= (keyRate * 4)) then
-			
 			effect.new("test3", mouse.pos, point(0,-20), explosion, -1, {name = "", fCount = point(13,1), fps = 20, loop = false})
-			
 			keyTimer = love.timer.getTime()		
-			
 		end
 		
 	elseif gameStates.curState == gameStates.SCORES then
