@@ -1,4 +1,5 @@
 require "point"
+gravity = point(0,96.04)
 require "pixel"
 require "entity"
 require "ents"
@@ -10,6 +11,7 @@ require "player"
 require "viewInformation"
 require "ImageScanner"
 require "effect"
+require "key"
 
 math.randomseed(os.time())
 
@@ -18,6 +20,11 @@ gameFont = love.graphics.newFont("differentiator.ttf", 10)
 gameTitle = "Toss Battle"
 players = {}
 keys = {}
+keys.__index = function(self, newKey)
+				     self[newKey] = key(newKey)
+					 return self[newKey]
+				  end
+--setmetatable(keys, keys)
 mouse = {}
 curKey = "";
 moveRate = 0
@@ -29,10 +36,11 @@ avgFPS = 0
 curPly = 1
 doDrop = false
 
-physFPS = 100
+physFPS = 30
 physFPSStep = 1 / physFPS
 physAccum = 0
-physMax = physFPSStep * 1.5
+physMax = 0.05 ---physFPSStep * 5
+physAlpha = 0
 
 keyTimer = love.timer.getTime()
 mouseTimer = love.timer.getTime()
@@ -160,12 +168,12 @@ function love.draw()
 		love.graphics.draw( sky    , viewInfo.pos.x(), viewInfo.pos.y(), 0, 1, 1, 0, 0, 0, 0)
 		love.graphics.draw( terrain, viewInfo.pos.x(), viewInfo.pos.y(), 0, 1, 1, 0, 0, 0, 0)
 
-		for _, ply in pairs(players) do
-			ply:draw(drawDelta)
-		end
+		--for _, ply in pairs(players) do
+			--ply:draw(drawDelta)
+		--end
 		
-		ents.draw(drawDelta)
-		pixel.drawPixels(drawDelta)
+		ents.draw(physAlpha)
+		pixel.drawPixels(physAlpha)
 		Flash.drawFlashes(drawDelta)
 		effect.drawEffects(drawDelta)
 		
@@ -197,7 +205,7 @@ function love.update(loveDelta)
 
 	if physAccum > physMax then physAccum = physMax end
 	
-	if keys["escape"] then os.exit() end
+	if keys["escape"] and (keys["escape"] < 10) then os.exit() end
 	
 	if gameStates.curState == gameStates.MENU then
 	
@@ -228,38 +236,44 @@ function love.update(loveDelta)
 		
 		end
 		
-		if physAccum > physFPSStep then
+		while physAccum >= physFPSStep do
 			Cycler.runCycles(physFPSStep)
 			pixel.movePixels(physFPSStep)
 			ents.think(physFPSStep)
 			physAccum = physAccum - physFPSStep
+			physAlpha = physAccum / physFPSStep
 		end
 		
+		
+		
 		-- Increase Power
-		if (keys["kp+"] or (keys["="] and (keys["lshift"] or keys["rshift"]) ) ) and (keyDelta >= keyRate) then
+		if (keys["kp+"] and (keys["kp+"] < keyRate)) or 
+		   ((keys["="] and (keys["="] < keyRate)) and 
+		   (keys["lshift"]:isPressed() or 
+		    keys["rshift"]:isPressed()) )  then
 			players[curPly].power = players[curPly].power + 1
 			if players[curPly].power > players[curPly].maxPower then
 				players[curPly].power = players[curPly].maxPower
 			end
-			keyTimer = love.timer.getTime()		
+			--keyTimer = love.timer.getTime()		
+		
 		end
 		
 		-- Decrease Power
-		if (keys["kp-"] or keys["-"]) and (keyDelta >= keyRate) then
+		if (keys["kp-"] < keyRate) or (keys["-"] < keyRate) then
 			players[curPly].power = players[curPly].power - 1
 			if players[curPly].power < 0 then
 				players[curPly].power = 0
 			end
-			keyTimer = love.timer.getTime()
 		end
 		-- Fire!!!
-		if keys[" "] and (keyDelta >= 0.5) then
+		if (keys[" "] < keyRate) then
 			fireShot(players[curPly])
 			keyTimer = love.timer.getTime()		
 		end
 		
 		-- Scroll View Right
-		if keys["left"] and (keyDelta >= (keyRate * 3)) then
+		if keys["left"] < keyRate then
 			moveRate = (moveRate + 25)
 			viewInfo:setPos(viewInfo.pos + point(moveRate,0))
 			keyTimer = love.timer.getTime()
@@ -268,7 +282,7 @@ function love.update(loveDelta)
 		end
 		
 		-- Scroll View Left
-		if keys["right"] and (keyDelta >= (keyRate * 3))  then
+		if keys["right"] < keyRate  then
 			moveRate = (moveRate - 25)
 			viewInfo:setPos(viewInfo.pos + point(moveRate,0))
 			keyTimer = love.timer.getTime()		
@@ -277,7 +291,7 @@ function love.update(loveDelta)
 		end
 		
 		-- Decrease Angle of shot
-		if keys["up"] and (keyDelta >= (keyRate * 4)) then
+		if keys["up"] < keyRate then
 			players[1].angle = players[1].angle - 1
 			if players[1].angle < -90 then
 				players[1].angle = -90
@@ -287,7 +301,7 @@ function love.update(loveDelta)
 		end
 		
 		-- Increase Angle of shot
-		if keys["down"] and (keyDelta >= (keyRate * 4))  then
+		if keys["down"] < keyRate  then
 			players[1].angle = players[1].angle + 1
 			if players[1].angle > 90 then
 				players[1].angle = 90
@@ -302,6 +316,8 @@ function love.update(loveDelta)
 			keyTimer = love.timer.getTime()		
 		end
 		
+		updateTimer = love.timer.getTime()		
+		
 	elseif gameStates.curState == gameStates.SCORES then
 		
 		if utDelta > 10 or (keys["return"] and utDelta > 1) then
@@ -311,32 +327,48 @@ function love.update(loveDelta)
 		
 	end
 	
-	if keys["d"] and (keyDelta >= (keyRate * 4)) then
+	if keys["d"] and (keys["d"] < keyRate) then
 		
 		print("**************** Debug Print *************************")
 		print("")
 		print("Effect Count: " .. tostring(effect.count()))
 		print("Pixel Count: " .. tostring(pixel.count()))
-		print("FPS: " .. tostring(curFPS))
-		print("avgFPS: " .. tostring(avgFPS))
+		---print("Lowest Pixel Velocity: " .. tostring(pixel.lowestVel) .. " : " .. tostring(pixel.lowestVel:length()))
+		--print("FPS: " .. tostring(curFPS))
+		--print("avgFPS: " .. tostring(avgFPS))
 		print("******************************************************")
+		print("Pixel List: ")
+		
+		for	k,v in pairs(pixel.pixels) do
+			
+			print("pixelID: " .. tostring(k))
+			print("pixelPos: " .. tostring(v.pos))
+			print("pixelVel: " .. tostring(v.vel))
+			
+		end
 		
 		keyTimer = love.timer.getTime()
 	end
 	
 end
 
-function love.keypressed( key )
+function love.keypressed( keyStr )
    
-  keys[key] = true 
-  print(key .. " pressed.")
+	if not (keys[keyStr]) then
+		keys[keyStr] = key(keyStr)
+	end
+	keys[keyStr]:press()
+	print(keyStr .. " pressed.")
    
 end
 
-function love.keyreleased( key )
+function love.keyreleased( keyStr )
    
-   keys[key] = false
-   print(key .. " released.")
+	if not (keys[keyStr]) then
+		keys[keyStr] = key(keyStr)
+	end
+	keys[keyStr]:release()
+	print(keyStr .. " released.")
   
 end
 

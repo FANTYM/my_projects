@@ -46,12 +46,12 @@ function entity.new(entName, position, velocity, dispImage, animInfo, thinkFunct
 	local newEnt = {}
 	setmetatable(newEnt, entity)
 	newEnt.name = entName
-	newEnt.gravity = point(0,20)
+	newEnt.gravity = gravity
 	newEnt.pThink = thinkFunction
 	newEnt.pCollide = collideFunction
 	newEnt.pos = position
+	newEnt.lastPos = newEnt.pos
 	newEnt.vel = velocity
-	newEnt.cRadius = collisionRadius
 	newEnt.img = dispImage
 	newEnt.imgData = newEnt.img:getData()
 	newEnt.anims = {}
@@ -89,6 +89,7 @@ function entity.new(entName, position, velocity, dispImage, animInfo, thinkFunct
 	end
 	
 	newEnt.angle = 0
+	newEnt.lastAngle = 0
 	newEnt.angVel = point(0,0)
 	newEnt.scale = 1
 	newEnt.mass = (newEnt.anims[0].fSize.x * newEnt.anims[0].fSize.y) * 0.9
@@ -96,14 +97,43 @@ function entity.new(entName, position, velocity, dispImage, animInfo, thinkFunct
 	newEnt.inertia = 0
 	newEnt.torque = 0
 	newEnt.friction = 0.95
+	newEnt.bounce = 0.2
 	newEnt.isDead = false
 	newEnt.deadTimer = love.timer.getTime()
 	newEnt.visible = true
 	newEnt.attachedEnts = {}
-	newEnt.aabb = {top= -(newEnt.anims[0].fSize.y * 0.5), left=-(newEnt.anims[0].fSize.x * 0.5) , bottom=(newEnt.anims[0].fSize.y * 0.5) , right=(newEnt.anims[0].fSize.x * 0.5) }
+	newEnt.aabb = { min = point(-(newEnt.anims[0].fSize.y * 0.5), -(newEnt.anims[0].fSize.x * 0.5)) , max = point(newEnt.anims[0].fSize.y * 0.5 , newEnt.anims[0].fSize.x * 0.5) }
 
 	return newEnt
 
+end
+
+function entity:separateAxisTest(ent2)
+	
+	if (self.aabb.max.x < ent2.aabb.min.x) or (self.aabb.min.x > ent2.aabb.max.x) then
+		return false
+	end
+	
+	if (self.aabb.max.y < ent2.aabb.min.y) or (self.aabb.min.y > ent2.aabb.max.y) then
+		return false
+	end
+ 
+	return true
+
+end
+
+function entity:setPos(newPos)
+	
+	self.lastPos = self.pos
+	self.pos = newPos
+	
+end
+
+function entity:setAngle(newAng)
+	
+	self.lastAngle = self.angle
+	self.angle = newAng
+	
 end
 
 function entity:reColor(oldColor, newColor)
@@ -134,7 +164,7 @@ end
 
 function entity:think(thinkDelta)
 
-
+	self.lastPos = self.pos
 	self.vel = self.vel + (self.gravity * thinkDelta)
 	self.pos = self.pos + (self.vel * thinkDelta)
 	
@@ -154,14 +184,15 @@ function entity:collide(colEnt)
 end
 
 
-function entity:draw(drawDelta)
+function entity:draw(physAdjust)
 
 	if self.visible then
 		if self.hasAnim then
 			self:doAnim()
 		end
 		--love.graphics.draw(self.img, self.pos.x, self.pos.y, math.rad(self.angle),self.scale,self.scale,self.cRadius * self.scale, self.cRadius * self.scale)
-		love.graphics.draw(self.img, self.pos.x, self.pos.y, math.rad(self.angle),self.scale,self.scale,(self.anims[self.curAnim].fSize.x  ) * 0.5, (self.anims[self.curAnim].fSize.y ) * 0.5)
+		--love.graphics.draw(self.img, self.pos.x, self.pos.y, math.rad(self.angle),self.scale,self.scale,(self.anims[self.curAnim].fSize.x  ) * 0.5, (self.anims[self.curAnim].fSize.y ) * 0.5)
+		love.graphics.draw(self.img, (self.lastPos.x * physAdjust) + (self.pos.x * (1 - physAdjust)), (self.lastPos.y * physAdjust) + (self.pos.y * (1 - physAdjust)), math.rad((self.lastAngle * physAdjust) + (self.angle * (1 - physAdjust))),self.scale,self.scale,(self.anims[self.curAnim].fSize.x  ) * 0.5, (self.anims[self.curAnim].fSize.y ) * 0.5)
 	end
 	
 

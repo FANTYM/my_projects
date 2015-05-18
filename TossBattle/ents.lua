@@ -5,7 +5,7 @@ ents.entList = {}
 ents.nextID = 0
 ents.lastThink = love.timer.getTime()
 ents.__index = ents
-ents.gravity = point(0,20)
+ents.gravity = gravity
 ents.collisionImage = ""
 
 
@@ -137,13 +137,13 @@ function ents.remove(eInfo)
 	
 end
 
-function ents.draw(drawDelta)
+function ents.draw(physAlpha)
 
 	for k, ent in pairs(ents.entList) do 
 		
 		if not (ent == nil) then
 			
-			ent:draw(drawDelta)
+			ent:draw(physAlpha)
 			
 		end
 	

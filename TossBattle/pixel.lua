@@ -9,7 +9,7 @@ pixel.minSimTime = 0.0
 pixel.lastSimTime = love.timer.getTime()
 pixel.image = ""
 pixel.imgData = ""
-pixel.gravity = point(0,20)
+pixel.gravity = gravity
 
 pixel.__index = pixel
 
@@ -34,11 +34,12 @@ function pixel.setImage(newImg)
 
 end
 
-function pixel.drawPixels()
+function pixel.drawPixels(physAlpha)
 	
 	for k, pxl in pairs(pixel.pixels) do
 		love.graphics.setColor(pxl.clr.r,pxl.clr.g,pxl.clr.b,pxl.clr.a)		
-		love.graphics.point(pxl.pos.x, pxl.pos.y)
+		--love.graphics.point(pxl.pos.x, pxl.pos.y)
+		love.graphics.point(( pxl.lastPos.x * physAlpha ) + (pxl.pos.x * (1 - physAlpha)), ( pxl.lastPos.y * physAlpha ) + (pxl.pos.y * (1 - physAlpha)))
 	end
 	
 	love.graphics.setColor(255,255,255,255)		
@@ -101,12 +102,14 @@ end
 function pixel:destroy()
 	
 	if self:inImage(self:getDispPos()) then
-		pixel.imgData:setPixel(self:getDispPos().x, self:getDispPos().y, self.clr.r, self.clr.g, self.clr.b, self.clr.a)
+		pixel.imgData:setPixel(self:getDispPos().x, self:getDispPos().y, self.orgClr.r * 0.85, self.orgClr.g * 0.85 , self.orgClr.b * 0.85, self.orgClr.a)
 	end
 	
 	pixel.clearMapPos(self)
 	
 	pixel.pixels[self.id] = nil	
+	
+	self = nil
 
 end
 
@@ -119,14 +122,18 @@ function pixel.mt:__call(pos, vel)
 	if  existing == nil then
 		setmetatable(pxl, pixel)
 		pxl.pos = pos
+		pxl.lastPos = pos
 		pxl.vel = vel
 		pxl.img = pixel.image
 		if pxl:inImage() then
 			r,g,b,a = pixel.image:getData():getPixel(pos.x, pos.y)
-			pxl.clr = Color(r,g,b,a)
+			--pxl.clr = Color(r,g,b,a)
+			pxl.orgClr = Color(r,g,b,a)
+			pxl.clr = Color(255,0,0,a)
 			pixel.imgData:setPixel(pos.x, pos.y, r,g,b,0)
 		else
 			pxl.clr = Color(0,0,0,0)
+			pxl.orgClr = Color(0,0,0,0)
 		end
 		pxl.mass = 1
 		pxl.lastSim = love.timer.getTime()
@@ -168,9 +175,12 @@ function pixel:getDispPos()
 
 end
 
+--pixel.lowestVel = point(7680,5670)
+
 function pixel:move(updateDelta)
 	
 	--imgData = pixel.image:getData()
+	self.lastPos = self.pos
 	simDelta = updateDelta --love.timer.getTime() - self.lastSim
 	if self:inImage(self:getDispPos()) then 
 		pixel.clearMapPos(self)
@@ -204,10 +214,11 @@ function pixel:move(updateDelta)
 		return
 	end
 	
-	if (self.vel:closerThan(point(0,0), 3)) then
+	--if (self.vel:closerThan(point(0,0), (gravity:length() * 2) * simDelta)) then
+	if self.pos == self.lastPos then
 		
 		if self.notMoving then
-			if love.timer.getTime() - self.deadTimer > 0.5 then
+			if love.timer.getTime() - self.deadTimer >= 2 then
 				self:destroy()
 				return
 			end
@@ -216,8 +227,12 @@ function pixel:move(updateDelta)
 			self.notMoving = true
 		end
 	else
+		--print(self.vel)
 		self.notMoving = false
 		pixel.putInMap(self)
+		--if self.vel:length() < pixel.lowestVel:length() then
+			--pixel.lowestVel = self.vel
+		--end
 	end
 	
 	--self.lastSim = love.timer.getTime()

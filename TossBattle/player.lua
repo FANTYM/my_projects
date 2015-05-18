@@ -13,10 +13,11 @@ function player.new(plyName, plyPos, plyColor)
 	nPly.color = plyColor
 	nPly.vel = point(0,0)
 	nPly.pos = plyPos
+	nPly.lastPos = plyPos
 	nPly.angle = 45
 	nPly.power = 100
 	nPly.maxPower = 500
-	nPly.gravity = point(0,20)
+	nPly.gravity = gravity
 	nPly.lastThink = love.timer.getTime()
 	nPly.cRadius = 16
 	
@@ -44,20 +45,21 @@ function player.new(plyName, plyPos, plyColor)
 
 end
 
-function player:think()
+function player:think(updateDelta)
 	
-	thinkDelta = love.timer.getTime() - self.lastThink
+	thinkDelta = updateDelta --love.timer.getTime() - self.lastThink
 
-	
+	self.lastPos = self.pos
 	self.vel = self.vel + (self.gravity * thinkDelta)
 	self.treadEnt.vel = self.vel
 	self.bodyEnt.vel = self.vel
 	self.barrelEnt.vel = self.vel
 	
 	self.pos = self.pos + (self.vel * thinkDelta)
-	self.treadEnt.pos = self.pos
-	self.bodyEnt.pos = self.pos
-	self.barrelEnt.pos = self.pos + point(0,2)
+		
+	self.treadEnt:setPos(self.pos)
+	self.bodyEnt:setPos(self.pos)
+	self.barrelEnt:setPos(self.pos + point(0,2))
 	
 	colCheckPos = self.pos + (self.vel:getNormal() * self.cRadius)
 	if pixel.inImage(nil, colCheckPos) then
@@ -81,7 +83,7 @@ end
 function player:draw(drawDelta)
 	
 	
-	self.barrelEnt.angle = self.angle
+	self.barrelEnt:setAngle(self.angle)
 	self.barrelEnt:draw(drawDelta)
 	self.treadEnt:draw(drawDelta)
 	self.bodyEnt:draw(drawDelta)
