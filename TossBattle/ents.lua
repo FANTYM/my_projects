@@ -255,27 +255,27 @@ function ents.think(updateDelta)
 					
 					ent.vel = point(0,0)
 					ent:collide()
-					ents.entList[k] = nil
+					--ents.entList[k] = nil
 					
 				end
 			
 			end
 			
-			if ent.vel:closerThan(point(0,0), 0.25) then
+			--if ent.vel:closerThan(point(0,0), 0.25) then
 				
 				--ents.entList[k] = nil
-				if ent.isDead then
-					if love.timer.getTime() - ent.deadTimer > 1 then
-						ents.entList[k] = nil
-					end
-				else
-					ent.isDead = true
-					ent.deadTimer = love.timer.getTime()
-				end
-			else
-				ent.isDead = false
+				--if ent.isDead then
+					--if love.timer.getTime() - ent.deadTimer > 1 then
+						--ents.entList[k] = nil
+					--end
+				--else
+					--ent.isDead = true
+					--ent.deadTimer = love.timer.getTime()
+				--end
+			--else
+				--ent.isDead = false
 				
-			end
+			--end
 			
 		end
 	

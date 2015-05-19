@@ -11,7 +11,7 @@ require "player"
 require "viewInformation"
 require "ImageScanner"
 require "effect"
-require "key"
+require "keys"
 
 math.randomseed(os.time())
 
@@ -19,12 +19,7 @@ titleFont = love.graphics.newFont("differentiator.ttf", 20)
 gameFont = love.graphics.newFont("differentiator.ttf", 10)
 gameTitle = "Toss Battle"
 players = {}
-keys = {}
-keys.__index = function(self, newKey)
-				     self[newKey] = key(newKey)
-					 return self[newKey]
-				  end
---setmetatable(keys, keys)
+--keys = {}
 mouse = {}
 curKey = "";
 moveRate = 0
@@ -140,6 +135,94 @@ function love.load()
 	
 	sky:refresh()
 	
+	
+		-- Increase Power
+		keys.registerEvent("kp+", function() 
+			players[curPly].power = players[curPly].power + 1
+			if players[curPly].power > players[curPly].maxPower then
+				players[curPly].power = players[curPly].maxPower
+			end
+		end)
+		
+		-- Decrease Power
+		keys.registerEvent("kp-", function() 
+			players[curPly].power = players[curPly].power - 1
+			if players[curPly].power < 0 then
+				players[curPly].power = 0
+			end
+		end)
+		
+		-- Fire!!!
+		keys.registerEvent(" ", function() 
+			fireShot(players[curPly])
+		end)
+		
+		-- Scroll View Right
+		keys.registerEvent("left", function()
+			moveRate = (moveRate + 25)
+			viewInfo:setPos(viewInfo.pos + point(moveRate,0))
+		end)
+		
+		-- Scroll View Left
+		keys.registerEvent("right", function()
+			moveRate = (moveRate - 25)
+			viewInfo:setPos(viewInfo.pos + point(moveRate,0))
+		end)
+		
+		-- Decrease Angle of shot
+		keys.registerEvent("up", function()
+			players[curPly].angle = players[curPly].angle - 1
+			if players[curPly].angle < -90 then
+				players[curPly].angle = -90
+			end
+			print(players[curPly].angle)
+
+		end)
+		
+		-- Increase Angle of shot
+		keys.registerEvent("down", function()
+			players[curPly].angle = players[curPly].angle + 1
+			if players[curPly].angle > 90 then
+				players[curPly].angle = 90
+			end
+			print(players[curPly].angle)
+			
+		end)
+		
+		keys.registerEvent("escape", function() 
+			os.exit() 
+		end)
+		
+		keys.registerEvent("return", function()
+			if gameStates.curState == gameStates.MENU then
+				gameStates.curState = gameStates.TERRAIN
+			elseif gameStates.curState == gameStates.SCORES then
+				gameStates.curState = gameStates.MENU
+			end
+		end)
+		
+		keys.registerEvent("d", function() 
+			
+			print("**************** Debug Print *************************")
+			print("")
+			print("Effect Count: " .. tostring(effect.count()))
+			print("Pixel Count: " .. tostring(pixel.count()))
+			print("******************************************************")
+			--print("Pixel List: ")
+			
+			--for	k,v in pairs(pixel.pixels) do
+				
+				--print("pixelID: " .. tostring(k))
+				--print("pixelPos: " .. tostring(v.pos))
+				--print("pixelVel: " .. tostring(v.vel))
+				
+			--end
+			
+		
+		end)
+		
+		love.keyboard.setKeyRepeat( true )
+		
 end
 
 function love.draw()
@@ -168,10 +251,6 @@ function love.draw()
 		love.graphics.draw( sky    , viewInfo.pos.x(), viewInfo.pos.y(), 0, 1, 1, 0, 0, 0, 0)
 		love.graphics.draw( terrain, viewInfo.pos.x(), viewInfo.pos.y(), 0, 1, 1, 0, 0, 0, 0)
 
-		--for _, ply in pairs(players) do
-			--ply:draw(drawDelta)
-		--end
-		
 		ents.draw(physAlpha)
 		pixel.drawPixels(physAlpha)
 		Flash.drawFlashes(drawDelta)
@@ -205,14 +284,10 @@ function love.update(loveDelta)
 
 	if physAccum > physMax then physAccum = physMax end
 	
-	if keys["escape"] and (keys["escape"] < 10) then os.exit() end
+	
 	
 	if gameStates.curState == gameStates.MENU then
 	
-		if keys["return"] then
-			gameStates.curState = gameStates.TERRAIN
-		end
-		
 		if (mouse["l"] and mouse["l"].down) and (mouseDelta >= 0.5) then
 			thisEff = effect.new("test", mouse.pos, point(0,0), tankFire, 5, {name = "", fCount = point(8,8), fps = 16, loop = false})
 			thisEff.pos = thisEff.pos - point(0,64)
@@ -244,71 +319,7 @@ function love.update(loveDelta)
 			physAlpha = physAccum / physFPSStep
 		end
 		
-		
-		
-		-- Increase Power
-		if (keys["kp+"] and (keys["kp+"] < keyRate)) or 
-		   ((keys["="] and (keys["="] < keyRate)) and 
-		   (keys["lshift"]:isPressed() or 
-		    keys["rshift"]:isPressed()) )  then
-			players[curPly].power = players[curPly].power + 1
-			if players[curPly].power > players[curPly].maxPower then
-				players[curPly].power = players[curPly].maxPower
-			end
-			--keyTimer = love.timer.getTime()		
-		
-		end
-		
-		-- Decrease Power
-		if (keys["kp-"] < keyRate) or (keys["-"] < keyRate) then
-			players[curPly].power = players[curPly].power - 1
-			if players[curPly].power < 0 then
-				players[curPly].power = 0
-			end
-		end
-		-- Fire!!!
-		if (keys[" "] < keyRate) then
-			fireShot(players[curPly])
-			keyTimer = love.timer.getTime()		
-		end
-		
-		-- Scroll View Right
-		if keys["left"] < keyRate then
-			moveRate = (moveRate + 25)
-			viewInfo:setPos(viewInfo.pos + point(moveRate,0))
-			keyTimer = love.timer.getTime()
-		else
-			moveRate = moveRate  * 0.999
-		end
-		
-		-- Scroll View Left
-		if keys["right"] < keyRate  then
-			moveRate = (moveRate - 25)
-			viewInfo:setPos(viewInfo.pos + point(moveRate,0))
-			keyTimer = love.timer.getTime()		
-		else
-			moveRate = moveRate  * 0.999
-		end
-		
-		-- Decrease Angle of shot
-		if keys["up"] < keyRate then
-			players[1].angle = players[1].angle - 1
-			if players[1].angle < -90 then
-				players[1].angle = -90
-			end
-			print(players[1].angle)
-			keyTimer = love.timer.getTime()
-		end
-		
-		-- Increase Angle of shot
-		if keys["down"] < keyRate  then
-			players[1].angle = players[1].angle + 1
-			if players[1].angle > 90 then
-				players[1].angle = 90
-			end
-			print(players[1].angle)
-			keyTimer = love.timer.getTime()		
-		end
+		moveRate = moveRate  * 0.999
 		
 		-- Test mouse click, makes explosion effect
 		if (mouse["l"] and mouse["l"].down) and (keyDelta >= (keyRate * 4)) then
@@ -320,54 +331,30 @@ function love.update(loveDelta)
 		
 	elseif gameStates.curState == gameStates.SCORES then
 		
-		if utDelta > 10 or (keys["return"] and utDelta > 1) then
+		if utDelta > 10 then
 			gameStates.curState = gameStates.MENU
-			updateTimer = curTime
+			--updateTimer = curTime
 		end
 		
 	end
 	
-	if keys["d"] and (keys["d"] < keyRate) then
 		
-		print("**************** Debug Print *************************")
-		print("")
-		print("Effect Count: " .. tostring(effect.count()))
-		print("Pixel Count: " .. tostring(pixel.count()))
-		---print("Lowest Pixel Velocity: " .. tostring(pixel.lowestVel) .. " : " .. tostring(pixel.lowestVel:length()))
-		--print("FPS: " .. tostring(curFPS))
-		--print("avgFPS: " .. tostring(avgFPS))
-		print("******************************************************")
-		print("Pixel List: ")
-		
-		for	k,v in pairs(pixel.pixels) do
-			
-			print("pixelID: " .. tostring(k))
-			print("pixelPos: " .. tostring(v.pos))
-			print("pixelVel: " .. tostring(v.vel))
-			
-		end
-		
-		keyTimer = love.timer.getTime()
-	end
-	
 end
 
 function love.keypressed( keyStr )
    
-	if not (keys[keyStr]) then
-		keys[keyStr] = key(keyStr)
-	end
-	keys[keyStr]:press()
+
+	keys:press(keyStr)
+	
 	print(keyStr .. " pressed.")
    
 end
 
 function love.keyreleased( keyStr )
    
-	if not (keys[keyStr]) then
-		keys[keyStr] = key(keyStr)
-	end
-	keys[keyStr]:release()
+
+	keys:release(keyStr)
+	
 	print(keyStr .. " released.")
   
 end
@@ -407,6 +394,7 @@ function fireShot(ply)
 	newShot = ents.newEntity("testShot" .. tostring(math.random()), shotPos, (shotPos - ply.pos):getNormal() * ply.power, basicShot, nil, function() end, 
 			function(self)
 				doExplosion(self.pos, self.cRadius * 2, newShot.mass * 3, self.vel)
+				ents.remove(self)
 			end)
 			newShot:setScale(0.25)
 
@@ -416,7 +404,7 @@ function doExplosion(where, radius, power, hitVel)
 	
 	print("Boom!")
 	pixelCount = 0
-	destroyPerc = 0.6
+	destroyPerc = 0.1
 	deadCount = 0
 	thisBoom = effect.new("exp" .. tostring(where), where, hitVel, explosion, -1, {name = "", fCount = point(13,1), fps = 20, loop = false})
 	thisBoom:setScale(0.5)
@@ -437,8 +425,9 @@ function doExplosion(where, radius, power, hitVel)
 							--diffVec = where - newPos
 							diffVec = newPos - where
 							diffVec:normalize()
-							diffVec = diffVec * (power + (math.random() * (power * 0.5)))
-							pixel(newPos , (diffVec + hitVel)) --- + point(0, -power)))
+							diffVec = diffVec * power 
+							--pixel(newPos , (diffVec + hitVel) + (gravity * -4)) --- + point(0, -power)))
+							pixel(newPos, -(gravity * 1.5) + diffVec)
 							
 						end
 					

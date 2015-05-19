@@ -14,8 +14,8 @@ function player.new(plyName, plyPos, plyColor)
 	nPly.vel = point(0,0)
 	nPly.pos = plyPos
 	nPly.lastPos = plyPos
-	nPly.angle = 45
-	nPly.power = 100
+	nPly.angle = 15
+	nPly.power = 200
 	nPly.maxPower = 500
 	nPly.gravity = gravity
 	nPly.lastThink = love.timer.getTime()
@@ -45,38 +45,60 @@ function player.new(plyName, plyPos, plyColor)
 
 end
 
+
+function player:collide(colEnt)
+	--colCheckPos = self.pos + (self.vel:getNormal() * self.cRadius)
+	--if pixel.inImage(nil, colCheckPos) then
+				
+		--r,g,b,a = pixel.imgData:getPixel(colCheckPos.x, colCheckPos.y)
+		--print(a)
+		--if a > 250 then
+			
+			--self.vel = self.vel * 0.1
+			self.pos = self.lastPos
+			--self.pos = self.pos + self.vel
+			
+			
+		--end
+	
+	--end
+end
+
+
 function player:think(updateDelta)
 	
 	thinkDelta = updateDelta --love.timer.getTime() - self.lastThink
 
 	self.lastPos = self.pos
+	
 	self.vel = self.vel + (self.gravity * thinkDelta)
+	self.pos = self.pos + (self.vel * thinkDelta)
+	
 	self.treadEnt.vel = self.vel
 	self.bodyEnt.vel = self.vel
 	self.barrelEnt.vel = self.vel
 	
-	self.pos = self.pos + (self.vel * thinkDelta)
-		
-	self.treadEnt:setPos(self.pos)
-	self.bodyEnt:setPos(self.pos)
-	self.barrelEnt:setPos(self.pos + point(0,2))
-	
-	colCheckPos = self.pos + (self.vel:getNormal() * self.cRadius)
+	--[[colCheckPos = self.pos + (self.vel:getNormal() * self.cRadius)
 	if pixel.inImage(nil, colCheckPos) then
 				
 		r,g,b,a = pixel.imgData:getPixel(colCheckPos.x, colCheckPos.y)
 		--print(a)
 		if a > 250 then
 			
-			self.vel = (self.gravity * -1) * thinkDelta
-			self.pos = self.pos + self.vel
+			self.vel = self.vel * 0.1
+			--self.pos = self.pos + self.vel
 			
 			
 		end
 	
 	end
+	--]]
+		
+	self.treadEnt:setPos(self.pos)
+	self.bodyEnt:setPos(self.pos)
+	self.barrelEnt:setPos(self.pos + point(0,2))
 	
-	self.lastThink = love.timer.getTime()
+	--self.lastThink = love.timer.getTime()
 	
 end
 	

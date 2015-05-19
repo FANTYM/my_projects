@@ -179,34 +179,34 @@ end
 
 function pixel:move(updateDelta)
 	
-	--imgData = pixel.image:getData()
 	self.lastPos = self.pos
-	simDelta = updateDelta --love.timer.getTime() - self.lastSim
-	if self:inImage(self:getDispPos()) then 
-		pixel.clearMapPos(self)
-	end
+	
+	simDelta = updateDelta 
+
+	pixel.clearMapPos(self)
+
 	self.vel = self.vel + (pixel.gravity * simDelta)
-	local nextPos = self.pos + (self.vel * simDelta)
-	nextPos.x = math.floor(nextPos.x)
-	nextPos.y = math.floor(nextPos.y)
+	local checkPos = self.pos + self.vel:getNormal()
+	
+	checkPos.x = math.floor(checkPos.x)
+	checkPos.y = math.floor(checkPos.y)
 		
-	pxl2 = pixel.getFromMap(nextPos)
+	pxl2 = pixel.getFromMap(checkPos)
 	
 	if pxl2 then
 		self:resolveCollision(pxl2, true)
 	else
-		if self:inImage(nextPos) then
-			r,g,b,a  = pixel.imgData:getPixel(nextPos.x, nextPos.y)
+		if self:inImage(checkPos) then
+			r,g,b,a  = pixel.imgData:getPixel(checkPos.x, checkPos.y)
 		end
 		
-		if a > 128 then
-			--self:destroy()
-			--self.vel = -self.vel
-			self:resolveCollision(nextPos, false)
-		else
-			self.pos = self.pos + (self.vel * simDelta)
+		if a > 0 then
+			self:resolveCollision(checkPos, false)
 		end
+		
 	end
+	
+	self.pos = self.pos + (self.vel * simDelta)
 	
 	if (self.pos.x < 0 and  self.vel.x < 0) or 
 	   (self.pos.x > pixel.imgData:getWidth() and  self.vel.x > 0) then
@@ -214,11 +214,10 @@ function pixel:move(updateDelta)
 		return
 	end
 	
-	--if (self.vel:closerThan(point(0,0), (gravity:length() * 2) * simDelta)) then
 	if self.pos == self.lastPos then
 		
 		if self.notMoving then
-			if love.timer.getTime() - self.deadTimer >= 2 then
+			if love.timer.getTime() - self.deadTimer >= 1.5 then
 				self:destroy()
 				return
 			end
@@ -227,15 +226,10 @@ function pixel:move(updateDelta)
 			self.notMoving = true
 		end
 	else
-		--print(self.vel)
 		self.notMoving = false
-		pixel.putInMap(self)
-		--if self.vel:length() < pixel.lowestVel:length() then
-			--pixel.lowestVel = self.vel
-		--end
 	end
 	
-	--self.lastSim = love.timer.getTime()
+	pixel.putInMap(self)
 	
 end
 
@@ -255,8 +249,9 @@ function pixel:resolveCollision(pxl2, canMove)
 		v2.x = v2.x + p * self.mass * normal.x
 		v2.y = v2.y + p * self.mass * normal.y
 		
-		self.vel = v1
-		pxl2.vel = v2
+		self.vel = v1 * 0.9
+		pxl2.vel = v2 * 0.9
+		
 	else
 		normal = point(pxl2.x - self.pos.x, pxl2.y - self.pos.y):normalize()
 		a1 = self.vel:dot(normal)
@@ -271,7 +266,7 @@ function pixel:resolveCollision(pxl2, canMove)
 		v2.x = v2.x + p * self.mass * normal.x
 		v2.y = v2.y + p * self.mass * normal.y	
 		
-		self.vel = v1 * 0.5
+		self.vel = v1 * 0.9
 		
 	end
 		
