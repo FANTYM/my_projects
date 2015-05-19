@@ -68,7 +68,7 @@ function entity.new(entName, position, velocity, dispImage, animInfo, thinkFunct
 		animInfo.fSize = point(math.floor(newEnt.srcImgData:getWidth() / animInfo.fCount.x), math.floor(newEnt.srcImgData:getHeight() / animInfo.fCount.y))
 		animInfo.curFrame = animInfo.curFrame or 0
 		animInfo.tFrames = animInfo.tFrames or (animInfo.fCount.x * animInfo.fCount.y)
-		animInfo.lastFrameTime = love.timer.getTime()
+		animInfo.lastFrameTime = gameTime
 		animInfo.timePerFrame = 1 / animInfo.fps
 		animInfo.fRow = math.floor(animInfo.curFrame / animInfo.fCount.x);
 		animInfo.fCol = math.floor(animInfo.curFrame % animInfo.fCount.x);
@@ -99,7 +99,7 @@ function entity.new(entName, position, velocity, dispImage, animInfo, thinkFunct
 	newEnt.friction = 0.95
 	newEnt.bounce = 0.2
 	newEnt.isDead = false
-	newEnt.deadTimer = love.timer.getTime()
+	newEnt.deadTimer = gameTime
 	newEnt.visible = true
 	newEnt.attachedEnts = {}
 	newEnt.aabb = { min = point(-(newEnt.anims[0].fSize.y * 0.5), -(newEnt.anims[0].fSize.x * 0.5)) , max = point(newEnt.anims[0].fSize.y * 0.5 , newEnt.anims[0].fSize.x * 0.5) }
@@ -200,7 +200,7 @@ end
 
 function entity:doAnim()
 	
-	local fDelta = love.timer.getTime() - self.anims[self.curAnim].lastFrameTime
+	local fDelta = gameTime - self.anims[self.curAnim].lastFrameTime
 	
 	if fDelta == 0 then return end
 	if fDelta >= self.anims[self.curAnim].timePerFrame then
@@ -232,7 +232,7 @@ function entity:doAnim()
 		
 		self.imgData:paste(self.srcImgData, 0,0, self.anims[self.curAnim].fCol * self.anims[self.curAnim].fSize.x, self.anims[self.curAnim].fRow * self.anims[self.curAnim].fSize.y, self.anims[self.curAnim].fSize.x, self.anims[self.curAnim].fSize.y)
 		self.img:refresh()
-		self.anims[self.curAnim].lastFrameTime = love.timer.getTime()
+		self.anims[self.curAnim].lastFrameTime = gameTime
 	end
 	
 	

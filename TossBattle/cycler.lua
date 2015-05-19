@@ -13,7 +13,7 @@ function Cycler.new(rate, startValue, lowerBound, upperBound, loop, goingUp)
 	newCycler.value = startValue
 	newCycler.lBound = lowerBound
 	newCycler.uBound = upperBound
-	newCycler.lastRun = love.timer.getTime()
+	newCycler.lastRun = gameTime
 	newCycler.id = Cycler.curID
 	
 	Cycler.cyclers[Cycler.curID] = newCycler
@@ -49,8 +49,7 @@ end
 
 function Cycler:think(updateDelta)
 	
-	local deltaTime = updateDelta--love.timer.getTime() - self.lastRun
-	--self.lastRun = love.timer.getTime()
+	local deltaTime = updateDelta
 	
 	if self.cycle then
 		if self.goingUp then

@@ -6,7 +6,7 @@ pixel.pixelMap = {{}}
 pixel.pixels = {}
 pixel.pixelID = 0
 pixel.minSimTime = 0.0
-pixel.lastSimTime = love.timer.getTime()
+pixel.lastSimTime = gameTime
 pixel.image = ""
 pixel.imgData = ""
 pixel.gravity = gravity
@@ -29,7 +29,7 @@ end
 
 function pixel.setImage(newImg)
 	
-	pixel.image = newImg
+	--pixel.image = newImg
 	pixel.imgData = newImg:getData()
 
 end
@@ -75,7 +75,7 @@ function pixel.getFromMap(pos)
 	mapPos = point(math.floor(pos.x), math.floor(pos.y))
 	
 	if pixel.pixelMap[mapPos.y] == nil then
-		pixel.pixelMap[mapPos.y] = {}
+		return nil
 	end
 	
 	if (pixel.pixelMap[mapPos.y][mapPos.x] == nil) then
@@ -88,24 +88,21 @@ end
 
 function pixel.movePixels(updateDelta)
 	
-	--if love.timer.getTime() - pixel.lastSimTime > pixel.minSimTime then
-		--pixel.lastSimTime = love.timer.getTime()
-		for k, pxl in pairs(pixel.pixels) do
-			if not (pxl == nil) then
-				pxl:move(updateDelta)
-			end
+	for k, pxl in pairs(pixel.pixels) do
+		if not (pxl == nil) then
+			pxl:move(updateDelta)
 		end
-	--end
+	end
 	
 end
 
 function pixel:destroy()
 	
+	pixel.clearMapPos(self)
+	
 	if self:inImage(self:getDispPos()) then
 		pixel.imgData:setPixel(self:getDispPos().x, self:getDispPos().y, self.orgClr.r * 0.85, self.orgClr.g * 0.85 , self.orgClr.b * 0.85, self.orgClr.a)
 	end
-	
-	pixel.clearMapPos(self)
 	
 	pixel.pixels[self.id] = nil	
 	
@@ -126,24 +123,25 @@ function pixel.mt:__call(pos, vel)
 		pxl.vel = vel
 		pxl.img = pixel.image
 		if pxl:inImage() then
-			r,g,b,a = pixel.image:getData():getPixel(pos.x, pos.y)
+			r,g,b,a = pixel.imgData:getPixel(pos.x, pos.y)
 			--pxl.clr = Color(r,g,b,a)
 			pxl.orgClr = Color(r,g,b,a)
-			pxl.clr = Color(255,0,0,a)
+			pxl.clr = Color(255,math.random() * 255,0,a)
 			pixel.imgData:setPixel(pos.x, pos.y, r,g,b,0)
 		else
 			pxl.clr = Color(0,0,0,0)
 			pxl.orgClr = Color(0,0,0,0)
 		end
-		pxl.mass = 1
-		pxl.lastSim = love.timer.getTime()
+		pxl.mass = 3
 		pxl.id = pixel.pixelID
-		pxl.deadTimer = love.timer.getTime()
+		pxl.deadTimer = gameTime
 		pxl.notMoving = false
 		pixel.pixelID = pixel.pixelID + 1
 		pixel.pixels[pxl.id] = pxl
 		pixel.putInMap(pxl)
 	else
+		
+		pixel.putInMap(existing)
 		
 		return existing
 		
@@ -179,34 +177,47 @@ end
 
 function pixel:move(updateDelta)
 	
-	self.lastPos = self.pos
+	self.lastPos = self:getDispPos()
+	didHit = false
 	
 	simDelta = updateDelta 
 
 	pixel.clearMapPos(self)
 
 	self.vel = self.vel + (pixel.gravity * simDelta)
+	local newPos = self.pos + (self.vel * simDelta)
 	local checkPos = self.pos + self.vel:getNormal()
 	
-	checkPos.x = math.floor(checkPos.x)
-	checkPos.y = math.floor(checkPos.y)
-		
-	pxl2 = pixel.getFromMap(checkPos)
+	newPos.x = math.floor(newPos.x)
+	newPos.y = math.floor(newPos.y)
+	
+	
+	pxl2 = pixel.getFromMap(newPos)
 	
 	if pxl2 then
-		self:resolveCollision(pxl2, true)
+		self:resolveCollision(pxl2, true, simDelta)
+		--print("hit Pixel")
+		didHit = true
+		self.pos = self.pos + (self.vel * simDelta)
 	else
-		if self:inImage(checkPos) then
-			r,g,b,a  = pixel.imgData:getPixel(checkPos.x, checkPos.y)
+		if self:inImage(newPos) then
+			r,g,b,a  = pixel.imgData:getPixel(newPos.x, newPos.y)
+			
+			if a > 0 then
+				self:resolveCollision(newPos, false, simDelta)
+				--print("hit ground")
+				didHit = true
+			else
+				self.pos = self.pos + (self.vel * simDelta)
+			end
 		end
-		
-		if a > 0 then
-			self:resolveCollision(checkPos, false)
-		end
-		
 	end
 	
-	self.pos = self.pos + (self.vel * simDelta)
+	--if not didHit then
+		--self.pos = self.pos + (self.vel * simDelta)
+	--else
+	--	--self.pos = self.lastPos -- + (self.vel * simDelta)
+	--end
 	
 	if (self.pos.x < 0 and  self.vel.x < 0) or 
 	   (self.pos.x > pixel.imgData:getWidth() and  self.vel.x > 0) then
@@ -214,15 +225,15 @@ function pixel:move(updateDelta)
 		return
 	end
 	
-	if self.pos == self.lastPos then
+	if self:getDispPos() == self.lastPos then
 		
 		if self.notMoving then
-			if love.timer.getTime() - self.deadTimer >= 1.5 then
+			if gameTime - self.deadTimer >= 0.1 then
 				self:destroy()
 				return
 			end
 		else
-			self.deadTimer = love.timer.getTime()
+			self.deadTimer = gameTime
 			self.notMoving = true
 		end
 	else
@@ -233,9 +244,10 @@ function pixel:move(updateDelta)
 	
 end
 
-function pixel:resolveCollision(pxl2, canMove)
+function pixel:resolveCollision(pxl2, canMove, physStep)
 	
-	if canMove then
+	if canMove  or (pxl2.x == nil) then
+		
 		normal = point(pxl2.pos.x - self.pos.x, pxl2.pos.y - self.pos.y):normalize()
 		a1 = self.vel:dot(normal)
 		a2 = pxl2.vel:dot(normal)
@@ -243,30 +255,36 @@ function pixel:resolveCollision(pxl2, canMove)
 		v1 = self.vel:copy()
 		v2 = pxl2.vel:copy()
 		
-		v1.x = v1.x - p * pxl2.mass * normal.x
-		v1.y = v1.y - p * pxl2.mass * normal.y
+		v1.x = v1.x - (p * pxl2.mass * normal.x)
+		v1.y = v1.y - (p * pxl2.mass * normal.y)
 		
-		v2.x = v2.x + p * self.mass * normal.x
-		v2.y = v2.y + p * self.mass * normal.y
+		v2.x = v2.x + (p * self.mass * normal.x)
+		v2.y = v2.y + (p * self.mass * normal.y)
 		
-		self.vel = v1 * 0.9
+		self.vel = v1 * 0.9 
 		pxl2.vel = v2 * 0.9
 		
+		pushVec1 = self.pos - pxl2.pos
+		pushVec2 = pxl2.pos - self.pos
+		
+		self.pos = self.pos + (pushVec1 * physStep)
+		pxl2.pos = pxl2.pos + (pushVec2 * physStep)
+		
 	else
+		self.vel = (self.vel - gravity)
 		normal = point(pxl2.x - self.pos.x, pxl2.y - self.pos.y):normalize()
 		a1 = self.vel:dot(normal)
 		a2 = point(0,0):dot(normal)
-		p = (2 * (a1 - a2)) / (self.mass + (self.mass * self.mass))
-		v1 = self.vel:copy()
-		v2 = point(0,0)
+		p = (2 * (a1 - a2)) / (self.mass + 90000)
+	
+		self.vel.x = self.vel.x - (p * 90000 * normal.x)
+		self.vel.y = self.vel.y - (p * 90000 * normal.y)
 		
-		v1.x = v1.x - p * (self.mass * self.mass) * normal.x
-		v1.y = v1.y - p * (self.mass * self.mass) * normal.y
+		pushVec1 = self.pos - pxl2
 		
-		v2.x = v2.x + p * self.mass * normal.x
-		v2.y = v2.y + p * self.mass * normal.y	
+		self.pos = self.pos + pushVec1 -- * physStep)
 		
-		self.vel = v1 * 0.9
+		---self.vel = self.vel * 0.01
 		
 	end
 		

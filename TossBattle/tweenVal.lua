@@ -7,7 +7,7 @@ function tweenVal.mt:__call( nStartVal, nEndVal, nTimeToArrive, lBound, uBound )
 	
 	local tv = {}
 	setmetatable(tv, tweenVal)
-	tv.created = love.timer.getTime()
+	tv.created = gameTime
 	tv.TTL = nTimeToArrive
 	tv.lBound = lBound
 	tv.uBound = uBound
@@ -28,7 +28,7 @@ function tweenVal:__call( nStart, nEnd, nTime, lBound, uBound)
 		self.startVal = nStart
 		self.endVal = nEnd
 		self.TTL = nTime
-		self.created = love.timer.getTime()
+		self.created = gameTime
 		self.isDone = false
 		self.lBound = lBound
 		self.uBound = uBound
@@ -41,13 +41,13 @@ end
 
 function tweenVal:timeLeft()
 	
-	return self.TTL - (love.timer.getTime() - self.created)
+	return self.TTL - (gameTime - self.created)
 
 end
 
 function tweenVal:update()
 	
-	self.percent = self.clamp( ((love.timer.getTime() - self.created) / self.TTL) , 0 , 1 )
+	self.percent = self.clamp( ((gameTime - self.created) / self.TTL) , 0 , 1 )
 	
 	if self.percent == 1 then self.isDone = true end
 	

@@ -8,7 +8,7 @@ function keys.newKey(k, repeatRate, pressed)
 	
 	curKey = {}
 	curKey.pressed = pressed or false
-	curKey.lastPress = love.timer.getTime() - 10
+	curKey.lastPress = gameTime
 	curKey.repeatRate = repeatRate
 	curKey.func = function() end
 	keys.keyTable[k] = curKey
@@ -25,7 +25,7 @@ function keys.registerEvent(k, func)
 
 end
 
-function keys:getKeyInfo(k)
+function keys.getKeyInfo(k)
 
 	curKey = keys.keyTable[k] or keys.newKey(k, keys.defaultRepeat)
 	
@@ -33,7 +33,7 @@ function keys:getKeyInfo(k)
 
 end
 
-function keys:setKeyRate(k, rate)
+function keys.setKeyRate(k, rate)
 	
 	curKey = keys.keyTable[k] or keys.newKey(k, keys.defaultRepeat)
 	
@@ -42,15 +42,15 @@ function keys:setKeyRate(k, rate)
 end
 
 
-function keys:press(k)
+function keys.press(k)
 	
 	curKey = keys.keyTable[k] or keys.newKey(k, keys.defaultRepeat)
 	
-	if love.timer.getTime() - curKey.lastPress > curKey.repeatRate then
+	if gameTime - curKey.lastPress > curKey.repeatRate then
 	
 		curKey.pressed = true
 		curKey.func()
-		curKey.lastPress = love.timer.getTime()
+		curKey.lastPress = gameTime
 		
 	end
 	
@@ -58,7 +58,7 @@ function keys:press(k)
 
 end
 
-function keys:release(k)
+function keys.release(k)
 	
 	curKey = keys.keyTable[k] or keys.newKey(k, keys.defaultRepeat)
 	

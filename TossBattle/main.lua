@@ -1,5 +1,7 @@
+gameTime = 0
 require "point"
-gravity = point(0,96.04)
+--gravity = point(0,96.04)
+gravity = point(0,40)
 require "pixel"
 require "entity"
 require "ents"
@@ -30,55 +32,40 @@ curFPS = 0
 avgFPS = 0
 curPly = 1
 doDrop = false
-
+ 
 physFPS = 30
 physFPSStep = 1 / physFPS
 physAccum = 0
-physMax = 0.05 ---physFPSStep * 5
+physMax = 1 ---physFPSStep * 5
 physAlpha = 0
 
-keyTimer = love.timer.getTime()
-mouseTimer = love.timer.getTime()
+
+mouseTimer = gameTime
 updateTimer = love.timer.getTime()
-drawTimer = love.timer.getTime()
-fpsTimer = love.timer.getTime()
-lastTerrain = love.timer.getTime()
+drawTimer = gameTime
+lastScreenUpdate = gameTime
 
 gameStates = { MENU = 0 , PLAY = 1, SCORES = 2, TERRAIN=3, curState = 0 }
 
 screenSize = point(love.graphics.getWidth(), love.graphics.getHeight())
 gameSize = point(math.floor(screenSize.x + (screenSize.x * 0.3)), screenSize.y)
 
+viewInfo = viewInformation.new(point(0,0), gameSize, screenSize, 0.5)
+
 tankFire = love.graphics.newImage("tank_fire.png")
 basicShot = love.graphics.newImage("basic_shot.png")
 explosion = love.graphics.newImage("explosion.png")
 
-viewInfo = viewInformation.new(point(0,0), gameSize, screenSize, 1)
---screenTween = tweenVal(point(0,0), point(0,0), 0)
-
 terrain = love.graphics.newImage(love.image.newImageData(gameSize.x, gameSize.y))
 tData = terrain:getData()
 sky = love.graphics.newImage(love.image.newImageData(gameSize.x, gameSize.y))
+sData = sky:getData()
+screen = love.graphics.newCanvas( ) --love.graphics.newImage(love.image.newImageData(screenSize.x, screenSize.y))
 
 pixel.setImage(terrain)
+ents.setImage(terrain)
 
-ents.collisionImage = terrain
 
---
---terrainScan = ImageScanner.new(terrain, 1, 
---	function(x,y,clr)
---		if clr.a == 0 then
---			return true
---		end
---		return false
---	end,
---	function(x,y,clr,imgInfo)
---		for nY = y, 0, -1 do
---			pixel(point(x,nY), point(0,2))
---			--imgInfo.imgData:setPixel(x,nY, 0,0,0,0)
---		end
---	end)
---terrainScan:setUBounds(point(10,10))
 
 colorPool = { Color(255,255,255,255),
   		      Color(255,  0,  0,255),
@@ -118,7 +105,7 @@ colorPool = { Color(255,255,255,255),
             }
 
 function love.load()
-	skyData = sky:getData()
+	
 	
 	function makeSky(x,y,r,g,b,a)
 		
@@ -131,144 +118,109 @@ function love.load()
 		
 	end
 	
-	skyData:mapPixel(makeSky)
-	
+	sData:mapPixel(makeSky)
 	sky:refresh()
-	
-	
-		-- Increase Power
-		keys.registerEvent("kp+", function() 
-			players[curPly].power = players[curPly].power + 1
-			if players[curPly].power > players[curPly].maxPower then
-				players[curPly].power = players[curPly].maxPower
-			end
-		end)
-		
-		-- Decrease Power
-		keys.registerEvent("kp-", function() 
-			players[curPly].power = players[curPly].power - 1
-			if players[curPly].power < 0 then
-				players[curPly].power = 0
-			end
-		end)
-		
-		-- Fire!!!
-		keys.registerEvent(" ", function() 
-			fireShot(players[curPly])
-		end)
-		
-		-- Scroll View Right
-		keys.registerEvent("left", function()
-			moveRate = (moveRate + 25)
-			viewInfo:setPos(viewInfo.pos + point(moveRate,0))
-		end)
-		
-		-- Scroll View Left
-		keys.registerEvent("right", function()
-			moveRate = (moveRate - 25)
-			viewInfo:setPos(viewInfo.pos + point(moveRate,0))
-		end)
-		
-		-- Decrease Angle of shot
-		keys.registerEvent("up", function()
-			players[curPly].angle = players[curPly].angle - 1
-			if players[curPly].angle < -90 then
-				players[curPly].angle = -90
-			end
-			print(players[curPly].angle)
 
-		end)
+	-- Increase Power
+	keys.registerEvent("kp+", function() 
+		players[curPly].power = players[curPly].power + 1
+		if players[curPly].power > players[curPly].maxPower then
+			players[curPly].power = players[curPly].maxPower
+		end
+	end)
+	keys.setKeyRate("kp+", 0.01)
+	
+	-- Decrease Power
+	keys.registerEvent("kp-", function() 
+		players[curPly].power = players[curPly].power - 1
+		if players[curPly].power < 0 then
+			players[curPly].power = 0
+		end
+	end)
+	keys.setKeyRate("kp-", 0.01)
+	
+	-- Fire!!!
+	keys.registerEvent(" ", function() 
+		fireShot(players[curPly])
+	end)
+	keys.setKeyRate(" ", 0.5)
+	
+	-- Scroll View Right
+	keys.registerEvent("left", function()
+		moveRate = (moveRate + 25)
+		viewInfo:setPos(viewInfo.pos + point(moveRate,0))
+	end)
+	keys.setKeyRate("left", 0.01)
+	
+	-- Scroll View Left
+	keys.registerEvent("right", function()
+		moveRate = (moveRate - 25)
+		viewInfo:setPos(viewInfo.pos + point(moveRate,0))
+	end)
+	keys.setKeyRate("right", 0.01)
+	
+	-- Decrease Angle of shot
+	keys.registerEvent("up", function()
+		players[curPly].angle = players[curPly].angle - 1
+		if players[curPly].angle < -90 then
+			players[curPly].angle = -90
+		end
+		print(players[curPly].angle)
+
+	end)
+	keys.setKeyRate("up", 0.01)
+	
+	-- Increase Angle of shot
+	keys.registerEvent("down", function()
+		players[curPly].angle = players[curPly].angle + 1
+		if players[curPly].angle > 90 then
+			players[curPly].angle = 90
+		end
+		print(players[curPly].angle)
 		
-		-- Increase Angle of shot
-		keys.registerEvent("down", function()
-			players[curPly].angle = players[curPly].angle + 1
-			if players[curPly].angle > 90 then
-				players[curPly].angle = 90
-			end
-			print(players[curPly].angle)
+	end)
+	keys.setKeyRate("down", 0.01)
+	
+	keys.registerEvent("escape", function() 
+		os.exit() 
+	end)
+	
+	keys.registerEvent("return", function()
+		if gameStates.curState == gameStates.MENU then
+			gameStates.curState = gameStates.TERRAIN
+		elseif gameStates.curState == gameStates.SCORES then
+			gameStates.curState = gameStates.MENU
+		end
+	end)
+	
+	
+	keys.registerEvent("d", function() 
+		
+		print("**************** Debug Print *************************")
+		print("")
+		print("Effect Count: " .. tostring(effect.count()))
+		print("Pixel Count: " .. tostring(pixel.count()))
+		print("******************************************************")
+		--print("Pixel List: ")
+		
+		--for	k,v in pairs(pixel.pixels) do
 			
-		end)
-		
-		keys.registerEvent("escape", function() 
-			os.exit() 
-		end)
-		
-		keys.registerEvent("return", function()
-			if gameStates.curState == gameStates.MENU then
-				gameStates.curState = gameStates.TERRAIN
-			elseif gameStates.curState == gameStates.SCORES then
-				gameStates.curState = gameStates.MENU
-			end
-		end)
-		
-		keys.registerEvent("d", function() 
+			--print("pixelID: " .. tostring(k))
+			--print("pixelPos: " .. tostring(v.pos))
+			--print("pixelVel: " .. tostring(v.vel))
 			
-			print("**************** Debug Print *************************")
-			print("")
-			print("Effect Count: " .. tostring(effect.count()))
-			print("Pixel Count: " .. tostring(pixel.count()))
-			print("******************************************************")
-			--print("Pixel List: ")
-			
-			--for	k,v in pairs(pixel.pixels) do
-				
-				--print("pixelID: " .. tostring(k))
-				--print("pixelPos: " .. tostring(v.pos))
-				--print("pixelVel: " .. tostring(v.vel))
-				
-			--end
-			
+		--end
 		
-		end)
-		
-		love.keyboard.setKeyRepeat( true )
-		
+	
+	end)
+	
+	love.keyboard.setKeyRepeat( true )
+	
 end
 
 function love.draw()
-	
-	drawDelta = love.timer.getTime() - drawTimer
 
-	if gameStates.curState == gameStates.MENU then
-	
-		love.graphics.setFont(titleFont)
-		love.graphics.setColor(255,255,255,255)
-		love.graphics.print(gameTitle, (screenSize.x * 0.5) - (titleFont:getWidth(gameTitle) * 0.5), (screenSize.y * 0.5) - (titleFont:getHeight(gameTitle)))
-		love.graphics.print("Press [Enter] to play", (screenSize.x * 0.5) - (titleFont:getWidth("Press [Enter] to play") * 0.5), (screenSize.y * 0.5) + (titleFont:getHeight(gameTitle)))
-		effect.drawEffects(drawDelta)
-		
-	elseif gameStates.curState == gameStates.TERRAIN then
-		
-		local terrainText = "Generating Terrain"
-		love.graphics.setFont(titleFont)
-		love.graphics.setColor(255,255,255,255)
-		love.graphics.print(terrainText, (screenSize.x * 0.5) - (titleFont:getWidth(terrainText) * 0.5), (screenSize.y * 0.5) - ((titleFont:getHeight(terrainText) * 2)))
-		love.graphics.print("-..Please Wait..-", (screenSize.x * 0.5) - (titleFont:getWidth("-..Please Wait..-") * 0.5), (screenSize.y * 0.5) + (titleFont:getHeight(terrainText)))
-		effect.drawEffects(drawDelta)
-	
-	elseif gameStates.curState == gameStates.PLAY then
-		love.graphics.setColor(255,255,255,255)		
-		love.graphics.draw( sky    , viewInfo.pos.x(), viewInfo.pos.y(), 0, 1, 1, 0, 0, 0, 0)
-		love.graphics.draw( terrain, viewInfo.pos.x(), viewInfo.pos.y(), 0, 1, 1, 0, 0, 0, 0)
-
-		ents.draw(physAlpha)
-		pixel.drawPixels(physAlpha)
-		Flash.drawFlashes(drawDelta)
-		effect.drawEffects(drawDelta)
-		
-	elseif gameStates.curState == gameStates.SCORES then
-
-		font = love.graphics.getFont()
-		
-		love.graphics.setColor(255 * textCycler:getValue() ,255 * (1 - textCycler:getValue()), 128 + (127 * textCycler:getValue()),255)
-		love.graphics.print("Game Over", (screenSize.x * 0.5) - (font:getWidth("Game Over") * 0.5), 200)
-		love.graphics.print("Press [Enter] to return to the menu", (screenSize.x * 0.5) - (font:getWidth("Press [Enter] to return to the menu") * 0.5), 330)
-		
-		effect.drawEffects(drawDelta)
-		
-	end
-	
-	drawTimer = love.timer.getTime()
+	love.graphics.draw( screen )
 
 end
 
@@ -276,22 +228,31 @@ end
 function love.update(loveDelta)
 
 	curTime = love.timer.getTime()
-	updateDelta = love.timer.getTime() - updateTimer
-	keyDelta = curTime - keyTimer
-	mouseDelta = curTime - mouseTimer
+	updateDelta = curTime - updateTimer
 	
+	mouseDelta = gameTime - mouseTimer
+
 	physAccum = physAccum + updateDelta
 
 	if physAccum > physMax then physAccum = physMax end
 	
-	
-	
+	while physAccum >= physFPSStep do
+
+		gameTime = gameTime + physFPSStep
+		Cycler.runCycles(physFPSStep)
+		pixel.movePixels(physFPSStep)
+		ents.think(physFPSStep)
+		physAccum = physAccum - physFPSStep
+		physAlpha = physAccum / physFPSStep
+		
+	end
+		
 	if gameStates.curState == gameStates.MENU then
 	
 		if (mouse["l"] and mouse["l"].down) and (mouseDelta >= 0.5) then
-			thisEff = effect.new("test", mouse.pos, point(0,0), tankFire, 5, {name = "", fCount = point(8,8), fps = 16, loop = false})
+			thisEff = effect.new("test" .. tostring(math.random()), mouse.pos, point(0,0), tankFire, 10, {name = "", fCount = point(8,8), fps = 16, loop = true})
 			thisEff.pos = thisEff.pos - point(0,64)
-			keyTimer = love.timer.getTime()		
+			mouseTimer = gameTime
 		end
 	
 	elseif gameStates.curState == gameStates.TERRAIN then
@@ -303,48 +264,82 @@ function love.update(loveDelta)
 		
 	elseif gameStates.curState == gameStates.PLAY then
 		
-		terrainDelta = love.timer.getTime() - lastTerrain
-		if terrainDelta > 0.0333 then
-				
-			terrain:refresh()
-			lastTerrain = love.timer.getTime()
-		
-		end
-		
-		while physAccum >= physFPSStep do
-			Cycler.runCycles(physFPSStep)
-			pixel.movePixels(physFPSStep)
-			ents.think(physFPSStep)
-			physAccum = physAccum - physFPSStep
-			physAlpha = physAccum / physFPSStep
-		end
-		
 		moveRate = moveRate  * 0.999
 		
 		-- Test mouse click, makes explosion effect
-		if (mouse["l"] and mouse["l"].down) and (keyDelta >= (keyRate * 4)) then
-			effect.new("test3", mouse.pos, point(0,-20), explosion, -1, {name = "", fCount = point(13,1), fps = 20, loop = false})
-			keyTimer = love.timer.getTime()		
+		if (mouse["l"] and mouse["l"].down) and (mouseDelta >= 0.5) then
+			effect.new("test3" .. tostring(math.random()), mouse.pos, point(0,-20), explosion, -1, {name = "", fCount = point(13,1), fps = 20, loop = false})
+			mouseTimer = gameTime
 		end
 		
 		updateTimer = love.timer.getTime()		
 		
 	elseif gameStates.curState == gameStates.SCORES then
 		
-		if utDelta > 10 then
+		if updateDelta > 10 then
 			gameStates.curState = gameStates.MENU
-			--updateTimer = curTime
 		end
+		
 		
 	end
 	
+	renderScreen(updateDelta)
+	
+end
+
+function renderScreen(updateDelta)
+
+	screen:clear()
+	love.graphics.setCanvas(screen)
 		
+		if gameStates.curState == gameStates.MENU then
+
+			love.graphics.setFont(titleFont)
+			love.graphics.setColor(255,255,255,255)
+			love.graphics.print(gameTitle, (screenSize.x * 0.5) - (titleFont:getWidth(gameTitle) * 0.5), (screenSize.y * 0.5) - (titleFont:getHeight(gameTitle)))
+			love.graphics.print("Press [Enter] to play", (screenSize.x * 0.5) - (titleFont:getWidth("Press [Enter] to play") * 0.5), (screenSize.y * 0.5) + (titleFont:getHeight(gameTitle)))
+			
+			
+		elseif gameStates.curState == gameStates.TERRAIN then
+			
+			local terrainText = "Generating Terrain"
+			love.graphics.setFont(titleFont)
+			love.graphics.setColor(255,255,255,255)
+			love.graphics.print(terrainText, (screenSize.x * 0.5) - (titleFont:getWidth(terrainText) * 0.5), (screenSize.y * 0.5) - ((titleFont:getHeight(terrainText) * 2)))
+			love.graphics.print("-..Please Wait..-", (screenSize.x * 0.5) - (titleFont:getWidth("-..Please Wait..-") * 0.5), (screenSize.y * 0.5) + (titleFont:getHeight(terrainText)))
+			
+		
+		elseif gameStates.curState == gameStates.PLAY then
+			love.graphics.setColor(255,255,255,255)	
+			love.graphics.draw( sky    , viewInfo.pos.x(), viewInfo.pos.y(), 0, 1, 1, 0, 0, 0, 0)
+			terrain:refresh()
+			love.graphics.draw( terrain, viewInfo.pos.x(), viewInfo.pos.y(), 0, 1, 1, 0, 0, 0, 0)
+			
+			ents.draw(physAlpha)
+			pixel.drawPixels(physAlpha)
+			Flash.drawFlashes(updateDelta)
+			
+			
+		elseif gameStates.curState == gameStates.SCORES then
+
+			font = love.graphics.getFont()
+			
+			love.graphics.setColor(255 * textCycler:getValue() ,255 * (1 - textCycler:getValue()), 128 + (127 * textCycler:getValue()),255)
+			love.graphics.print("Game Over", (screenSize.x * 0.5) - (font:getWidth("Game Over") * 0.5), 200)
+			love.graphics.print("Press [Enter] to return to the menu", (screenSize.x * 0.5) - (font:getWidth("Press [Enter] to return to the menu") * 0.5), 330)
+			
+			
+			
+		end
+	effect.drawEffects(updateDelta)
+	love.graphics.setCanvas() 
+	
 end
 
 function love.keypressed( keyStr )
    
 
-	keys:press(keyStr)
+	keys.press(keyStr)
 	
 	print(keyStr .. " pressed.")
    
@@ -353,7 +348,7 @@ end
 function love.keyreleased( keyStr )
    
 
-	keys:release(keyStr)
+	keys.release(keyStr)
 	
 	print(keyStr .. " released.")
   
@@ -392,9 +387,10 @@ function fireShot(ply)
 	
 	shotPos = ply.pos + point(math.sin(math.rad(-ply.angle)) * -16, math.cos(math.rad(-ply.angle)) * -16)
 	newShot = ents.newEntity("testShot" .. tostring(math.random()), shotPos, (shotPos - ply.pos):getNormal() * ply.power, basicShot, nil, function() end, 
-			function(self)
-				doExplosion(self.pos, self.cRadius * 2, newShot.mass * 3, self.vel)
-				ents.remove(self)
+			function(self, colInfo)
+				doExplosion(self.pos, self.cRadius * 2, 150, self.vel * -1)
+				ents.remove(self.id)
+				--self = nil
 			end)
 			newShot:setScale(0.25)
 
@@ -404,9 +400,9 @@ function doExplosion(where, radius, power, hitVel)
 	
 	print("Boom!")
 	pixelCount = 0
-	destroyPerc = 0.1
+	destroyPerc = 0.75
 	deadCount = 0
-	thisBoom = effect.new("exp" .. tostring(where), where, hitVel, explosion, -1, {name = "", fCount = point(13,1), fps = 20, loop = false})
+	thisBoom = effect.new("exp" .. tostring(where), where, point(0,0), explosion, -1, {name = "", fCount = point(13,1), fps = 20, loop = false})
 	thisBoom:setScale(0.5)
 	for y = -radius, radius do
 		for x = -radius, radius do
@@ -415,19 +411,19 @@ function doExplosion(where, radius, power, hitVel)
 				if pixel.inImage(nil, newPos) then
 					pixelCount = pixelCount + 1
 					if deadCount / pixelCount < destroyPerc then
-						terrain:getData():setPixel(newPos.x, newPos.y, 0,0,0,0)
+						tData:setPixel(newPos.x, newPos.y, 0,0,0,0)
 						deadCount = deadCount  + 1
 						--terrain:refresh()
 					else
 						
-						r,g,b,a = terrain:getData():getPixel(newPos.x, newPos.y)
+						r,g,b,a = tData:getPixel(newPos.x, newPos.y)
 						if not (a == 0) then
 							--diffVec = where - newPos
-							diffVec = newPos - where
+							diffVec = where - newPos
 							diffVec:normalize()
 							diffVec = diffVec * power 
 							--pixel(newPos , (diffVec + hitVel) + (gravity * -4)) --- + point(0, -power)))
-							pixel(newPos, -(gravity * 1.5) + diffVec)
+							pixel(newPos, diffVec)
 							
 						end
 					

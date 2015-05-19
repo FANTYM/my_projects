@@ -64,7 +64,7 @@ function effect.new(effName, position, velocity, dispImage, timeToLive, animInfo
 	newEff.angle = 0
 	newEff.scale = 1
 	newEff.isDead = false
-	newEff.created = love.timer.getTime()
+	newEff.created = gameTime
 	newEff.visible = true
 	newEff.ttl = timeToLive
 	newEff.lastDraw = newEff.created
@@ -84,7 +84,7 @@ function effect.new(effName, position, velocity, dispImage, timeToLive, animInfo
 		animInfo.fSize = point(math.floor(newEff.srcImgData:getWidth() / animInfo.fCount.x), math.floor(newEff.srcImgData:getHeight() / animInfo.fCount.y))
 		animInfo.curFrame = animInfo.curFrame or 0
 		animInfo.tFrames = animInfo.tFrames or (animInfo.fCount.x * animInfo.fCount.y)
-		animInfo.lastFrameTime = love.timer.getTime()
+		animInfo.lastFrameTime = gameTime
 		animInfo.timePerFrame = 1 / animInfo.fps
 		animInfo.endFrame = animInfo.endFrame or animInfo.tFrames
 		animInfo.fRow = math.floor(animInfo.curFrame / animInfo.fCount.x);
@@ -144,7 +144,7 @@ end
 
 function effect:doAnim()
 	
-	local fDelta = love.timer.getTime() - self.anims[self.curAnim].lastFrameTime
+	local fDelta = gameTime - self.anims[self.curAnim].lastFrameTime
 	
 	if fDelta == 0 then return end
 	if fDelta >= self.anims[self.curAnim].timePerFrame then
@@ -176,34 +176,34 @@ function effect:doAnim()
 		
 		self.imgData:paste(self.srcImgData, 0,0, self.anims[self.curAnim].fCol * self.anims[self.curAnim].fSize.x, self.anims[self.curAnim].fRow * self.anims[self.curAnim].fSize.y, self.anims[self.curAnim].fSize.x, self.anims[self.curAnim].fSize.y)
 		self.img:refresh()
-		self.anims[self.curAnim].lastFrameTime = love.timer.getTime()
+		self.anims[self.curAnim].lastFrameTime = gameTime
 	end
 	
 	
 
 end
 
-function effect.drawEffects(drawDelta)
+function effect.drawEffects(updateDelta)
 	
 	for k, eff in pairs(effect.effects) do
 		
-		eff:draw(drawDelta)
+		eff:draw(updateDelta)
 		
 	end
 
 end
 
-function effect:draw(drawDelta)
+function effect:draw(updateDelta)
 	
 	if self.visible then
 		if self.hasAnim then
 			self:doAnim()
 		end
-		self.pos = self.pos + (self.vel * drawDelta)
+		self.pos = self.pos + (self.vel * updateDelta)
 		love.graphics.draw(self.img, self.pos.x, self.pos.y, math.rad(self.angle),self.scale,self.scale,(self.anims[self.curAnim].fSize.x  ) * 0.5, (self.anims[self.curAnim].fSize.y ) * 0.5)
 	end
 	
-	if (love.timer.getTime() - self.created) > self.ttl then
+	if (gameTime - self.created) > self.ttl then
 		if not (self.ttl == -1) then
 			effect.effects[self.index] = nil
 		else

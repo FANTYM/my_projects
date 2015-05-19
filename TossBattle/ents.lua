@@ -3,11 +3,17 @@ require "entity"
 ents = {}
 ents.entList = {}
 ents.nextID = 0
-ents.lastThink = love.timer.getTime()
+ents.lastThink = gameTime
 ents.__index = ents
 ents.gravity = gravity
 ents.collisionImage = ""
 
+function ents.setImage(newImg)
+	
+	--pixel.image = newImg
+	ents.collisionImage = newImg:getData()
+
+end
 
 function ents.newEntity(entName, position, velocity,  dispImage, animInfo, thinkFunction, collideFunction)
 	
@@ -32,25 +38,26 @@ end
 	
 function ents.resolveCollision(ent1, ent2)
 
-	local normal = point(ent2.pos.x - ent1.pos.x, ent2.pos.y - ent1.pos.y):normalize()
+	
+	normal = point(ent2.pos.x - ent1.pos.x, ent2.pos.y - ent1.pos.y):normalize()
 
-    local a1 = ent1.vel.dot(normal)
-    local a2 = ent2.vel.dot(normal)
-    local p = (2 * (a1 - a2)) / (ent1.mass + ent2.mass)
-    local v1 = ent1.vel:copy()
+    a1 = ent1.vel.dot(normal)
+    a2 = ent2.vel.dot(normal)
+    p = (2 * (a1 - a2)) / (ent1.mass + ent2.mass)
+    v1 = ent1.vel:copy()
         
 	v1.x = v1.x - p * ent2.mass * normal.x
     v1.y = v1.y - p * ent2.mass * normal.y
-    local v2 = ent2.vel:copy()
+    v2 = ent2.vel:copy()
     v2.x = v2.x + p * ent1.mass * normal.x
     v2.y = v2.y + p * ent1.mass * normal.y
         
     ent1.vel = v1
     ent2.vel = v2
 
-    local pushVec1 = ent1.pos - ent2.pos
-    local pushVec2 = ent2.pos - ent1.pos
-    local penDist = -ent1.getPenDist(ent2)
+    pushVec1 = ent1.pos - ent2.pos
+    pushVec2 = ent2.pos - ent1.pos
+    penDist = -ent1.getPenDist(ent2)
         
     ent1.pos = ent1.pos + ((pushVec1 * penDist) * ent1.timeDelta)
     ent2.pos = ent2.pos + ((pushVec2 * penDist) * ent1.timeDelta)
@@ -118,11 +125,6 @@ function ents.remove(eInfo)
 	
 	if not (eInfo == nil) then
 		
-		if not (eInfo.name == nil) then
-			table.remove(ents.entList, eInfo.id)
-			return
-		end
-		
 		if type(eInfo) == "number" then
 			table.remove(ents.entList, eInfo)
 			return
@@ -132,6 +134,12 @@ function ents.remove(eInfo)
 			table.remove(ents.entList, ents.getID(eInfo))
 			return
 		end
+		
+		if not (eInfo.id == nil) then
+			table.remove(ents.entList, eInfo.id)
+			return
+		end
+		
 		
 	end
 	
@@ -236,47 +244,19 @@ end
 
 function ents.think(updateDelta)
 	
-	local thinkDelta = updateDelta --love.timer.getTime() - ents.lastThink
-	--ents.lastThink = love.timer.getTime()
+	local thinkDelta = updateDelta
 	
 	for k, ent in pairs(ents.entList) do 
-		
 		if not (ent == nil) then
-		
 			ent:think(updateDelta)
-				
 			colCheckPos = ent.pos + (ent.vel:getNormal() * ent.cRadius)
-			
 			if pixel.inImage(nil, colCheckPos) then
-				
-				r,g,b,a = ents.collisionImage:getData():getPixel(colCheckPos.x, colCheckPos.y)
-				--print(a)
-				if a > 250 then
-					
-					ent.vel = point(0,0)
-					ent:collide()
-					--ents.entList[k] = nil
-					
+				r,g,b,a = ents.collisionImage:getPixel(colCheckPos.x, colCheckPos.y)
+				if a > 0 then
+					--ent.vel = point(0,0)
+					ent:collide(colCheckPos)
 				end
-			
 			end
-			
-			--if ent.vel:closerThan(point(0,0), 0.25) then
-				
-				--ents.entList[k] = nil
-				--if ent.isDead then
-					--if love.timer.getTime() - ent.deadTimer > 1 then
-						--ents.entList[k] = nil
-					--end
-				--else
-					--ent.isDead = true
-					--ent.deadTimer = love.timer.getTime()
-				--end
-			--else
-				--ent.isDead = false
-				
-			--end
-			
 		end
 	
 	end
