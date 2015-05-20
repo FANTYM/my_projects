@@ -47,7 +47,11 @@ end
 function point:__mul(p2)
 	
 	if type(p2) == "table" then
-		return point(self.x * p2.x, self.y * p2.y)
+		if type(self) == "table" then
+			return point(self.x * p2.x, self.y * p2.y)
+		else
+			return point(self * p2.x, self * p2.y)
+		end
 	else
 		return point(self.x * p2, self.y * p2)
 	end

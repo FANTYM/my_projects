@@ -174,6 +174,38 @@ function pixel:getDispPos()
 end
 
 --pixel.lowestVel = point(7680,5670)
+function pixel:traceLine(startPos, endPos, step)
+	
+	--print("traceLine - startPos: " .. tostring(startPos) .. ", endPos: " .. tostring(endPos) .. ", step: " .. tostring(step))
+	--print("traceLen: " .. tostring((endPos - startPos):length()))
+	--print("numSteps: " .. tostring((endPos - startPos):length() / step:length())  )
+	
+	local sPos = startPos:copy()
+	local cPos = point(math.floor(sPos.x), math.floor(sPos.y))
+	
+	while not sPos:closerThan(endPos, 1) do
+		
+		
+		pxl2 = pixel.getFromMap(cPos)
+		
+		if pxl2 then
+			return cPos
+		else
+			if self:inImage(cPos) then
+				r,g,b,a  = pixel.imgData:getPixel(cPos.x, cPos.y)
+				if a > 0 then
+					return cPos
+				end
+			end
+		end
+		sPos = sPos + step
+		cPos = point(math.floor(sPos.x), math.floor(sPos.y))
+	end
+	
+
+	return endPos
+
+end
 
 function pixel:move(updateDelta)
 	
@@ -186,32 +218,36 @@ function pixel:move(updateDelta)
 
 	self.vel = self.vel + (pixel.gravity * simDelta)
 	local newPos = self.pos + (self.vel * simDelta)
-	local checkPos = self.pos + self.vel:getNormal()
 	
 	newPos.x = math.floor(newPos.x)
 	newPos.y = math.floor(newPos.y)
 	
+	checkCol = self:traceLine(self.pos, newPos, (newPos - self.pos):getNormal())
 	
-	pxl2 = pixel.getFromMap(newPos)
+	pxl2 = pixel.getFromMap(checkCol)
 	
 	if pxl2 then
+		self.pos = checkCol
 		self:resolveCollision(pxl2, true, simDelta)
 		--print("hit Pixel")
-		didHit = true
-		self.pos = self.pos + (self.vel * simDelta)
+		--didHit = true
+		
 	else
-		if self:inImage(newPos) then
-			r,g,b,a  = pixel.imgData:getPixel(newPos.x, newPos.y)
+		if self:inImage(checkCol) then
+			r,g,b,a  = pixel.imgData:getPixel(checkCol.x, checkCol.y)
 			
 			if a > 0 then
-				self:resolveCollision(newPos, false, simDelta)
+				self.pos = checkCol
+				self:resolveCollision(checkCol, false, simDelta)
 				--print("hit ground")
 				didHit = true
 			else
-				self.pos = self.pos + (self.vel * simDelta)
+				--self.pos = self.pos + (self.vel * simDelta)
 			end
 		end
 	end
+	
+	self.pos = self.pos + (self.vel * simDelta)
 	
 	--if not didHit then
 		--self.pos = self.pos + (self.vel * simDelta)
@@ -228,7 +264,7 @@ function pixel:move(updateDelta)
 	if self:getDispPos() == self.lastPos then
 		
 		if self.notMoving then
-			if gameTime - self.deadTimer >= 0.1 then
+			if gameTime - self.deadTimer >= 1 then
 				self:destroy()
 				return
 			end
@@ -271,21 +307,40 @@ function pixel:resolveCollision(pxl2, canMove, physStep)
 		pxl2.pos = pxl2.pos + (pushVec2 * physStep)
 		
 	else
-		self.vel = (self.vel - gravity)
-		normal = point(pxl2.x - self.pos.x, pxl2.y - self.pos.y):normalize()
-		a1 = self.vel:dot(normal)
-		a2 = point(0,0):dot(normal)
-		p = (2 * (a1 - a2)) / (self.mass + 90000)
-	
-		self.vel.x = self.vel.x - (p * 90000 * normal.x)
-		self.vel.y = self.vel.y - (p * 90000 * normal.y)
 		
-		pushVec1 = self.pos - pxl2
-		
-		self.pos = self.pos + pushVec1 -- * physStep)
-		
-		---self.vel = self.vel * 0.01
-		
+		----   TODO: Create a function to get the ground normal 
+		     --           From the collision image.
+		--print("before:")
+		--print(self.vel)
+		planeNorm = point(0,-1)
+		--planeNorm = (pxl2 - self.pos):getNormal()
+		--planeNorm = planeNorm:rotate( 45, pxl2)
+		self.vel = (self.vel - 2 * self.vel:dot(planeNorm) * planeNorm) * 0.8;
+		--self.vel = -( 2 * (planeNorm:dot(self.vel)) * ( planeNorm - self.vel ))
+		--print("after:")
+		--print(self.vel)
+		--print("")
+		--  −(2(n · v) n − v)
+		--planeNorm = (pxl2 - self.pos):getNormal()
+		--planeNorm = planeNorm:rotate(-90, pxl2)
+		--print(self.vel)
+		--print(planeNorm)
+		--print(planeNorm:dot(self.vel))
+		--Vn = planeNorm * (planeNorm:dot(self.vel)) 
+		--Vt = self.vel - Vn
+		--self.vel = Vt - (0.2 * Vn)
+		--self.vel = (self.vel - gravity)
+		--normal = point(pxl2.x - self.pos.x, pxl2.y - self.pos.y):normalize()
+		--a1 = self.vel:dot(normal)
+		--a2 = point(0,0):dot(normal)
+		--p = (2 * (a1 - a2)) / (self.mass )
+		--self.vel.x = self.vel.x - (p * normal.x)
+		--self.vel.y = self.vel.y - (p * normal.y)
+		--pushVec1 = pxl2 - self.pos -- pxl2
+		--self.pos = self.pos + (pushVec1 * physStep)
+		--self.vel = self.vel * -1
+		--self.vel = point(0,0)
+		--self.vel = self.vel * 0.2
 	end
 		
 	

@@ -389,7 +389,8 @@ function fireShot(ply)
 	newShot = ents.newEntity("testShot" .. tostring(math.random()), shotPos, (shotPos - ply.pos):getNormal() * ply.power, basicShot, nil, function() end, 
 			function(self, colInfo)
 				doExplosion(self.pos, self.cRadius * 2, 150, self.vel * -1)
-				ents.remove(self.id)
+				--ents.remove(self.id)
+				ents.entList[self.id] = nil
 				--self = nil
 			end)
 			newShot:setScale(0.25)
