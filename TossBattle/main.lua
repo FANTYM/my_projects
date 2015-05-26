@@ -1,7 +1,8 @@
 gameTime = 0
+
 require "point"
---gravity = point(0,96.04)
-gravity = point(0,40)
+gravity = point(0,96.04)
+require "viewInformation"
 require "pixel"
 require "entity"
 require "ents"
@@ -10,7 +11,6 @@ require "Cycler"
 require "Flash"
 require "tweenVal"
 require "player"
-require "viewInformation"
 require "ImageScanner"
 require "effect"
 require "keys"
@@ -42,7 +42,7 @@ physAlpha = 0
 
 mouseTimer = gameTime
 updateTimer = love.timer.getTime()
-drawTimer = gameTime
+--drawTimer = gameTime
 lastScreenUpdate = gameTime
 
 gameStates = { MENU = 0 , PLAY = 1, SCORES = 2, TERRAIN=3, curState = 0 }
@@ -50,11 +50,15 @@ gameStates = { MENU = 0 , PLAY = 1, SCORES = 2, TERRAIN=3, curState = 0 }
 screenSize = point(love.graphics.getWidth(), love.graphics.getHeight())
 gameSize = point(math.floor(screenSize.x + (screenSize.x * 0.3)), screenSize.y)
 
-viewInfo = viewInformation.new(point(0,0), gameSize, screenSize, 0.5)
+viewInfo = viewInformation.new(point(0,0), gameSize, screenSize, 1)
 
 tankFire = love.graphics.newImage("tank_fire.png")
 basicShot = love.graphics.newImage("basic_shot.png")
 explosion = love.graphics.newImage("explosion.png")
+angleMeter =  love.graphics.newImage("angle_meter.png")
+power_bar =  love.graphics.newImage("power_bar.png")
+power_bar_bg = love.graphics.newImage("power_bar_bg.png")
+power_bar_disp = love.graphics.newImage(love.image.newImageData(power_bar:getWidth(), power_bar:getHeight()))
 
 terrain = love.graphics.newImage(love.image.newImageData(gameSize.x, gameSize.y))
 tData = terrain:getData()
@@ -110,8 +114,8 @@ function love.load()
 	function makeSky(x,y,r,g,b,a)
 		
 		vertPerc = ( y / screenSize.y)
-		b = 255 - (127 * vertPerc)
-		g = 128 + ( 127 * (1 - vertPerc))
+		b = 255 - (127 * (vertPerc))
+		g = 128 + (127 * (1 - vertPerc))
 		a = 255
 		
 		return r,g,b,a
@@ -123,61 +127,76 @@ function love.load()
 
 	-- Increase Power
 	keys.registerEvent("kp+", function() 
-		players[curPly].power = players[curPly].power + 1
-		if players[curPly].power > players[curPly].maxPower then
-			players[curPly].power = players[curPly].maxPower
+		if gameStates.curState == gameStates.PLAY then
+			players[curPly].power = players[curPly].power + 1
+			if players[curPly].power > players[curPly].maxPower then
+				players[curPly].power = players[curPly].maxPower
+			end
+			doPowerBar()
 		end
 	end)
 	keys.setKeyRate("kp+", 0.01)
 	
 	-- Decrease Power
 	keys.registerEvent("kp-", function() 
-		players[curPly].power = players[curPly].power - 1
-		if players[curPly].power < 0 then
-			players[curPly].power = 0
+		if gameStates.curState == gameStates.PLAY then
+			players[curPly].power = players[curPly].power - 1
+			if players[curPly].power < 0 then
+				players[curPly].power = 0
+			end
+			doPowerBar()
 		end
 	end)
 	keys.setKeyRate("kp-", 0.01)
 	
 	-- Fire!!!
 	keys.registerEvent(" ", function() 
-		fireShot(players[curPly])
+		if gameStates.curState == gameStates.PLAY then
+			fireShot(players[curPly])
+		end
 	end)
 	keys.setKeyRate(" ", 0.5)
 	
 	-- Scroll View Right
 	keys.registerEvent("left", function()
-		moveRate = (moveRate + 25)
-		viewInfo:setPos(viewInfo.pos + point(moveRate,0))
+		if gameStates.curState == gameStates.PLAY then
+			moveRate = (moveRate - 25)
+			viewInfo:setPos(viewInfo.pos + point(moveRate,0))
+		end
 	end)
 	keys.setKeyRate("left", 0.01)
 	
 	-- Scroll View Left
 	keys.registerEvent("right", function()
-		moveRate = (moveRate - 25)
-		viewInfo:setPos(viewInfo.pos + point(moveRate,0))
+		if gameStates.curState == gameStates.PLAY then
+			moveRate = (moveRate + 25)
+			viewInfo:setPos(viewInfo.pos + point(moveRate,0))
+		end
 	end)
 	keys.setKeyRate("right", 0.01)
 	
 	-- Decrease Angle of shot
 	keys.registerEvent("up", function()
-		players[curPly].angle = players[curPly].angle - 1
-		if players[curPly].angle < -90 then
-			players[curPly].angle = -90
+		if gameStates.curState == gameStates.PLAY then
+			players[curPly].angle = players[curPly].angle - 1
+			if players[curPly].angle < -90 then
+				players[curPly].angle = -90
+			end
+			--print(players[curPly].angle)
 		end
-		print(players[curPly].angle)
 
 	end)
 	keys.setKeyRate("up", 0.01)
 	
 	-- Increase Angle of shot
 	keys.registerEvent("down", function()
-		players[curPly].angle = players[curPly].angle + 1
-		if players[curPly].angle > 90 then
-			players[curPly].angle = 90
+		if gameStates.curState == gameStates.PLAY then
+			players[curPly].angle = players[curPly].angle + 1
+			if players[curPly].angle > 90 then
+				players[curPly].angle = 90
+			end
+			--print(players[curPly].angle)
 		end
-		print(players[curPly].angle)
-		
 	end)
 	keys.setKeyRate("down", 0.01)
 	
@@ -225,12 +244,12 @@ function love.draw()
 end
 
 
+local didPhys = false
 function love.update(loveDelta)
 
 	curTime = love.timer.getTime()
-	updateDelta = curTime - updateTimer
-	
-	mouseDelta = gameTime - mouseTimer
+	local updateDelta = curTime - updateTimer
+	local mouseDelta = gameTime - mouseTimer
 
 	physAccum = physAccum + updateDelta
 
@@ -239,28 +258,40 @@ function love.update(loveDelta)
 	while physAccum >= physFPSStep do
 
 		gameTime = gameTime + physFPSStep
+		effect.thinkEffects(physFPSStep)
 		Cycler.runCycles(physFPSStep)
 		pixel.movePixels(physFPSStep)
 		ents.think(physFPSStep)
 		physAccum = physAccum - physFPSStep
 		physAlpha = physAccum / physFPSStep
+		didPhys = true
 		
+	end
+	
+	if didPhys then
+		renderScreen()
+		didPhys = false
 	end
 		
 	if gameStates.curState == gameStates.MENU then
 	
 		if (mouse["l"] and mouse["l"].down) and (mouseDelta >= 0.5) then
-			thisEff = effect.new("test" .. tostring(math.random()), mouse.pos, point(0,0), tankFire, 10, {name = "", fCount = point(8,8), fps = 16, loop = true})
+			local thisEff = effect.new("test" .. tostring(math.random()), mouse.pos, point(0,0), tankFire, 10, {name = "", fCount = point(8,8), fps = 16, loop = true})
 			thisEff.pos = thisEff.pos - point(0,64)
 			mouseTimer = gameTime
 		end
+		
+		updateTimer = love.timer.getTime()		
 	
 	elseif gameStates.curState == gameStates.TERRAIN then
 
 		generateTerrain()
 		playerOne = player.new("Fantym", point(50,200), Color(255,0,0,255))
 		players[curPly] = playerOne
+		doPowerBar()
 		gameStates.curState = gameStates.PLAY
+		
+		updateTimer = love.timer.getTime()		
 		
 	elseif gameStates.curState == gameStates.PLAY then
 		
@@ -283,11 +314,11 @@ function love.update(loveDelta)
 		
 	end
 	
-	renderScreen(updateDelta)
+	
 	
 end
 
-function renderScreen(updateDelta)
+function renderScreen()
 
 	screen:clear()
 	love.graphics.setCanvas(screen)
@@ -311,13 +342,19 @@ function renderScreen(updateDelta)
 		
 		elseif gameStates.curState == gameStates.PLAY then
 			love.graphics.setColor(255,255,255,255)	
-			love.graphics.draw( sky    , viewInfo.pos.x(), viewInfo.pos.y(), 0, 1, 1, 0, 0, 0, 0)
+			love.graphics.draw( sky    , -viewInfo.pos.x(), -viewInfo.pos.y(), 0, 1, 1, 0, 0, 0, 0)
 			terrain:refresh()
-			love.graphics.draw( terrain, viewInfo.pos.x(), viewInfo.pos.y(), 0, 1, 1, 0, 0, 0, 0)
+			love.graphics.draw( terrain, -viewInfo.pos.x(), -viewInfo.pos.y(), 0, 1, 1, 0, 0, 0, 0)
 			
 			ents.draw(physAlpha)
 			pixel.drawPixels(physAlpha)
-			Flash.drawFlashes(updateDelta)
+			Flash.drawFlashes()
+			
+			love.graphics.draw(power_bar_bg)
+			love.graphics.draw(power_bar_disp)
+			
+			
+			
 			
 			
 		elseif gameStates.curState == gameStates.SCORES then
@@ -331,7 +368,7 @@ function renderScreen(updateDelta)
 			
 			
 		end
-	effect.drawEffects(updateDelta)
+	effect.drawEffects()
 	love.graphics.setCanvas() 
 	
 end
@@ -341,7 +378,7 @@ function love.keypressed( keyStr )
 
 	keys.press(keyStr)
 	
-	print(keyStr .. " pressed.")
+	--print(keyStr .. " pressed.")
    
 end
 
@@ -350,26 +387,28 @@ function love.keyreleased( keyStr )
 
 	keys.release(keyStr)
 	
-	print(keyStr .. " released.")
+	--print(keyStr .. " released.")
   
 end
 
 function love.mousepressed( x, y, button )
-	print("Mouse " .. tostring(button) .. " is down")
+	--print("Mouse " .. tostring(button) .. " is down")
 	
 	if not mouse[button] then
 		mouse[button] = {}
 	end
+	
 	mouse[button].down = true
 	mouse[button].pos = point(x,y)
 	
 end
 
 function love.mousereleased( x, y, button )
-	print("Mouse " .. tostring(button) .. " is up")
+	--print("Mouse " .. tostring(button) .. " is up")
 	if not mouse[button] then
 		mouse[button] = {}
 	end
+	
 	mouse[button].down = false
 	mouse[button].pos = point(x,y)
 	
@@ -383,27 +422,36 @@ function love.mousemoved( x, y, dx, dy )
 	
 end
 
+function doPowerBar()
+
+	--power_bar_disp:getData():paste(power_bar_bg:getData(), 0,0, 0,0, power_bar:getWidth(), power_bar:getHeight() )
+	--power_bar_disp:refresh()
+	power_bar_disp:getData():mapPixel(imgWipeFunc)
+	power_bar_disp:getData():paste(power_bar:getData(), 0,0, 0,0, (players[curPly].power / players[curPly].maxPower) * power_bar:getWidth(), power_bar:getHeight())
+	power_bar_disp:refresh()
+
+end
+
 function fireShot(ply)
 	
-	shotPos = ply.pos + point(math.sin(math.rad(-ply.angle)) * -16, math.cos(math.rad(-ply.angle)) * -16)
-	newShot = ents.newEntity("testShot" .. tostring(math.random()), shotPos, (shotPos - ply.pos):getNormal() * ply.power, basicShot, nil, function() end, 
+	local shotPos = ply.pos + point(math.sin(math.rad(-ply.angle)) * -16, math.cos(math.rad(-ply.angle)) * -16)
+	local newShot = ents.newEntity("testShot" .. tostring(math.random()), shotPos, (shotPos - ply.pos):getNormal() * ply.power, basicShot, nil, function() end, 
 			function(self, colInfo)
 				doExplosion(self.pos, self.cRadius * 2, 150, self.vel * -1)
 				--ents.remove(self.id)
 				ents.entList[self.id] = nil
 				--self = nil
 			end)
-			newShot:setScale(0.25)
+	newShot:setScale(0.25)
 
 end
 
 function doExplosion(where, radius, power, hitVel)
 	
-	print("Boom!")
-	pixelCount = 0
-	destroyPerc = 0.75
-	deadCount = 0
-	thisBoom = effect.new("exp" .. tostring(where), where, point(0,0), explosion, -1, {name = "", fCount = point(13,1), fps = 20, loop = false})
+	local pixelCount = 0
+	local destroyPerc = 0.9
+	local deadCount = 0
+	local thisBoom = effect.new("exp" .. tostring(where), where, point(0,0), explosion, -1, {name = "", fCount = point(13,1), fps = 20, loop = false})
 	thisBoom:setScale(0.5)
 	for y = -radius, radius do
 		for x = -radius, radius do
@@ -414,43 +462,35 @@ function doExplosion(where, radius, power, hitVel)
 					if deadCount / pixelCount < destroyPerc then
 						tData:setPixel(newPos.x, newPos.y, 0,0,0,0)
 						deadCount = deadCount  + 1
-						--terrain:refresh()
 					else
-						
 						r,g,b,a = tData:getPixel(newPos.x, newPos.y)
 						if not (a == 0) then
-							--diffVec = where - newPos
-							diffVec = where - newPos
+							diffVec = newPos - where
 							diffVec:normalize()
 							diffVec = diffVec * power 
-							--pixel(newPos , (diffVec + hitVel) + (gravity * -4)) --- + point(0, -power)))
-							pixel(newPos, diffVec)
+							pixel(newPos, diffVec + (gravity * -2))
 							
 						end
-					
 					end
 				end
 			end
 		end
 	end
-	--terrainScan:doRuns()
-	doDrop = true
-	--terrain:refresh()
-	--print("pixels created: " .. tostring(pixelCount - deadCount))
-	
 
 end
 
+function imgWipeFunc(x,y,r,g,b,a)
+	
+	return 0,0,0,0
+		
+end
+	
 function generateTerrain()
 	
 	
-	function wipeFunc(x,y,r,g,b,a)
 	
-		return 0,0,0,0
-		
-	end
 	
-	tData:mapPixel(wipeFunc)
+	tData:mapPixel(imgWipeFunc)
 	
 	
 	terrainArray = {}
@@ -468,9 +508,9 @@ function generateTerrain()
 	
 	
 	
-	for s = 0, 25 + (math.random() * 25) do
+	for s = 0, 15 + (math.random() * 10) do
 		
-		for p = 0, 5 + (math.random() * 25) do
+		for p = 0, 5 + (math.random() * 15) do
 		
 			for x = 1, gameSize.x - 2 do
 					
@@ -505,7 +545,7 @@ function generateTerrain()
 		if y > gameSize.y - terrainArray[x] then
 			finPerc = (gameSize.y - y) / terrainArray[x]
 			finPerc = (finPerc + (math.random() * (finPerc * 0.2))) * 0.5
-			if finPerc > 0.5 then
+			if finPerc > 0.475275 then
 				newPerc = (newPerc + (finPerc - 0.5) / 0.5) * 0.5
 				g = 128 + (127 * (newPerc))
 				r = 64 * (1 - newPerc)

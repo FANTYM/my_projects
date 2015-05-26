@@ -6,7 +6,6 @@ pixel.pixelMap = {{}}
 pixel.pixels = {}
 pixel.pixelID = 0
 pixel.minSimTime = 0.0
-pixel.lastSimTime = gameTime
 pixel.image = ""
 pixel.imgData = ""
 pixel.gravity = gravity
@@ -38,8 +37,7 @@ function pixel.drawPixels(physAlpha)
 	
 	for k, pxl in pairs(pixel.pixels) do
 		love.graphics.setColor(pxl.clr.r,pxl.clr.g,pxl.clr.b,pxl.clr.a)		
-		--love.graphics.point(pxl.pos.x, pxl.pos.y)
-		love.graphics.point(( pxl.lastPos.x * physAlpha ) + (pxl.pos.x * (1 - physAlpha)), ( pxl.lastPos.y * physAlpha ) + (pxl.pos.y * (1 - physAlpha)))
+		love.graphics.point(-viewInfo.pos.x() + ( pxl.lastPos.x * physAlpha ) + (pxl.pos.x * (1 - physAlpha)), -viewInfo.pos.y() + ( pxl.lastPos.y * physAlpha ) + (pxl.pos.y * (1 - physAlpha)))
 	end
 	
 	love.graphics.setColor(255,255,255,255)		
@@ -126,13 +124,13 @@ function pixel.mt:__call(pos, vel)
 			r,g,b,a = pixel.imgData:getPixel(pos.x, pos.y)
 			--pxl.clr = Color(r,g,b,a)
 			pxl.orgClr = Color(r,g,b,a)
-			pxl.clr = Color(255,math.random() * 255,0,a)
+			pxl.clr = Color(math.random() * 255 ,math.random() * 255,0,a)
 			pixel.imgData:setPixel(pos.x, pos.y, r,g,b,0)
 		else
 			pxl.clr = Color(0,0,0,0)
 			pxl.orgClr = Color(0,0,0,0)
 		end
-		pxl.mass = 3
+		pxl.mass = 13 + math.ceil((math.random() * 13))
 		pxl.id = pixel.pixelID
 		pxl.deadTimer = gameTime
 		pxl.notMoving = false
@@ -175,85 +173,80 @@ end
 
 --pixel.lowestVel = point(7680,5670)
 function pixel:traceLine(startPos, endPos, step)
-	
+	--print(" ")
 	--print("traceLine - startPos: " .. tostring(startPos) .. ", endPos: " .. tostring(endPos) .. ", step: " .. tostring(step))
+	--print("stepLen: " .. tostring(step:length()))
 	--print("traceLen: " .. tostring((endPos - startPos):length()))
 	--print("numSteps: " .. tostring((endPos - startPos):length() / step:length())  )
 	
 	local sPos = startPos:copy()
 	local cPos = point(math.floor(sPos.x), math.floor(sPos.y))
+	local itCount = 0 
 	
-	while not sPos:closerThan(endPos, 1) do
+	if step:closerThan(point(0,0), 0) then
 		
+		return sPos, cPos
 		
+	end
+	--while not sPos:closerThan(endPos, 1) do
+	for tl = 0, (endPos - sPos):length(), step:length() do 
+		--print(tl)
+		itCount = itCount + 1
 		pxl2 = pixel.getFromMap(cPos)
 		
 		if pxl2 then
-			return cPos
+			return sPos, cPos
 		else
 			if self:inImage(cPos) then
 				r,g,b,a  = pixel.imgData:getPixel(cPos.x, cPos.y)
 				if a > 0 then
-					return cPos
+					return sPos, cPos
 				end
 			end
 		end
 		sPos = sPos + step
 		cPos = point(math.floor(sPos.x), math.floor(sPos.y))
+		if itCount > 4 then 
+			break
+		end
 	end
 	
 
-	return endPos
+	return sPos, cPos --endPos
 
 end
 
 function pixel:move(updateDelta)
 	
 	self.lastPos = self:getDispPos()
-	didHit = false
-	
 	simDelta = updateDelta 
-
 	pixel.clearMapPos(self)
-
 	self.vel = self.vel + (pixel.gravity * simDelta)
 	local newPos = self.pos + (self.vel * simDelta)
-	
+
 	newPos.x = math.floor(newPos.x)
 	newPos.y = math.floor(newPos.y)
 	
-	checkCol = self:traceLine(self.pos, newPos, (newPos - self.pos):getNormal())
+	self.pos, checkCol= self:traceLine(self.pos, newPos, (newPos - self.pos):getNormal())
 	
 	pxl2 = pixel.getFromMap(checkCol)
+	
+	if pxl2 == self then return end
 	
 	if pxl2 then
 		self.pos = checkCol
 		self:resolveCollision(pxl2, true, simDelta)
-		--print("hit Pixel")
-		--didHit = true
-		
 	else
 		if self:inImage(checkCol) then
 			r,g,b,a  = pixel.imgData:getPixel(checkCol.x, checkCol.y)
-			
 			if a > 0 then
 				self.pos = checkCol
 				self:resolveCollision(checkCol, false, simDelta)
-				--print("hit ground")
-				didHit = true
-			else
-				--self.pos = self.pos + (self.vel * simDelta)
 			end
 		end
 	end
 	
-	self.pos = self.pos + (self.vel * simDelta)
-	
-	--if not didHit then
-		--self.pos = self.pos + (self.vel * simDelta)
-	--else
-	--	--self.pos = self.lastPos -- + (self.vel * simDelta)
-	--end
+	self.pos = checkCol
 	
 	if (self.pos.x < 0 and  self.vel.x < 0) or 
 	   (self.pos.x > pixel.imgData:getWidth() and  self.vel.x > 0) then
@@ -280,42 +273,131 @@ function pixel:move(updateDelta)
 	
 end
 
+function pixel:getPlaneNormal(pPos)
+	
+	local curPos = point(0,0)
+	local pxlInfo = {}
+	local r, g, b, a
+	--local strOut = ""
+	local lowest = point(0,0)
+	local highest = point(0,0)
+	
+	for y = -1,1 do
+		pxlInfo[y] = {}
+		
+		for x = -1,1 do
+			
+			pxlInfo[y][x] = 0
+			
+			curPos.x = pPos.x + x
+			curPos.y = pPos.y + y
+			
+			if self:inImage(curPos) then
+				r,g,b,a  = pixel.imgData:getPixel(curPos.x, curPos.y)
+				if a > 0 then
+					pxlInfo[y][x] = 1
+				else
+					if x < lowest.x then
+						lowest.x = x
+					end
+					if x > highest.x then
+						highest.x = x
+					end
+					if y < lowest.y then
+						lowest.y = y
+					end
+					if y > highest.y then
+						highest.y = y
+					end
+				end
+			end
+			--strOut = strOut .. tostring(pxlInfo[y][x])
+		end
+		--strOut = strOut .. "\n"
+	end
+	
+	--print(strOut)
+	--print(lowest)
+	--print(highest)
+	local outVec = highest - lowest
+	outVec = outVec:rotate(-90, lowest) 
+	--print(lowest)
+	
+	return outVec		
+	
+end
+
 function pixel:resolveCollision(pxl2, canMove, physStep)
 	
-	if canMove  or (pxl2.x == nil) then
+	
+	if canMove or (pxl2.x == nil) then
 		
-		normal = point(pxl2.pos.x - self.pos.x, pxl2.pos.y - self.pos.y):normalize()
-		a1 = self.vel:dot(normal)
-		a2 = pxl2.vel:dot(normal)
-		p = (2 * (a1 - a2)) / (self.mass + pxl2.mass)
-		v1 = self.vel:copy()
-		v2 = pxl2.vel:copy()
+		colPos = point(pxl2.pos.x - self.pos.x, pxl2.pos.y - self.pos.y) * 0.5
+		normal = point(pxl2.pos.x - self.pos.x, pxl2.pos.y - self.pos.y):getNormal():rotate(90, colPos)
 		
-		v1.x = v1.x - (p * pxl2.mass * normal.x)
-		v1.y = v1.y - (p * pxl2.mass * normal.y)
+		bounce = 0.2
 		
-		v2.x = v2.x + (p * self.mass * normal.x)
-		v2.y = v2.y + (p * self.mass * normal.y)
+		relVel = self.vel - pxl2.vel
 		
-		self.vel = v1 * 0.9 
-		pxl2.vel = v2 * 0.9
+		j = ( -(1 + bounce) * relVel:dot(normal)) / (normal:dot(normal) * ( (1/self.mass) + (1/pxl2.mass) ))
 		
-		pushVec1 = self.pos - pxl2.pos
-		pushVec2 = pxl2.pos - self.pos
+		v1 = self.vel + ((j / self.mass) * normal)
+		v2 = pxl2.vel + ((j / pxl2.mass) * normal)
 		
-		self.pos = self.pos + (pushVec1 * physStep)
-		pxl2.pos = pxl2.pos + (pushVec2 * physStep)
+		self.vel = v1
+		pxl2.vel = v2
+		--print("pxl1: " .. tostring(self.vel))
+		--print("pxl2: " .. tostring(pxl2.vel))
+		--a1 = self.vel:dot(normal)
+		--a2 = pxl2.vel:dot(normal)
+		--p = (2 * (a1 - a2)) / (self.mass + pxl2.mass)
+		--v1 = self.vel --:copy()
+		--v2 = pxl2.vel --:copy()
+		
+		--v1.x = v1.x - (p * pxl2.mass * normal.x)
+		--v1.y = v1.y - (p * pxl2.mass * normal.y)
+		
+		--v2.x = v2.x + (p * self.mass * normal.x)
+		--v2.y = v2.y + (p * self.mass * normal.y)
+		
+		--self.vel = v1
+		--pxl2.vel = v2
+		
+		--pushVec1 = self.pos - pxl2.pos
+		--pushVec2 = pxl2.pos - self.pos
+		
+		--self.pos = self.pos + (pushVec1 * physStep)
+		--pxl2.pos = pxl2.pos + (pushVec2 * physStep)
 		
 	else
 		
 		----   TODO: Create a function to get the ground normal 
 		     --           From the collision image.
+			 
+		
+		planeNorm = self:getPlaneNormal(pxl2)
+		
+		bounce = 0.2
+		
+		j = ( (1 + bounce) * self.vel:getNormal():dot(planeNorm) ) / (planeNorm:dot(planeNorm) * ( (1/self.mass)))
+		
+		v1 = self.vel + ((j / self.mass) * planeNorm)
+		
+		self.vel = v1
+		
+		--print("pxl1: " .. tostring(self.vel))
+		--print("pxl2: ground")
+		--v2 = pxl2.vel + ((j / pxl2.mass) * normal)
+		
 		--print("before:")
 		--print(self.vel)
-		planeNorm = point(0,-1)
+		--self:getPlaneNormal(pxl2)
+		--planeNorm = point(0,-1)
+		--planeNorm = self:getPlaneNormal(pxl2)
 		--planeNorm = (pxl2 - self.pos):getNormal()
 		--planeNorm = planeNorm:rotate( 45, pxl2)
-		self.vel = (self.vel - 2 * self.vel:dot(planeNorm) * planeNorm) * 0.8;
+		--self.vel = point(0,0)
+		--self.vel =  self.vel + (planeNorm * (self.vel:length() * 2)) -- -2 * (self.vel:getNormal()):dot(planeNorm) * planeNorm
 		--self.vel = -( 2 * (planeNorm:dot(self.vel)) * ( planeNorm - self.vel ))
 		--print("after:")
 		--print(self.vel)
@@ -343,6 +425,9 @@ function pixel:resolveCollision(pxl2, canMove, physStep)
 		--self.vel = self.vel * 0.2
 	end
 		
+	--if self.vel:length() > 3000 then
+		--self.vel = point(0,0)
+	--end
 	
 
 end

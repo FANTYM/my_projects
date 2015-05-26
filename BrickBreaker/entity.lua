@@ -140,23 +140,47 @@ function entity:reColor(oldColor, newColor)
 	
 	imgData = self.img:getData()
 	
-	function pixFunc(x,y,r,g,b,a)
-	
-		if (r == oldColor.r) and
-		   (g == oldColor.g) and
-		   (b == oldColor.b) and
-		   (a == oldColor.a) then
-				r = newColor.r
-				g = newColor.g
-				b = newColor.b
-				a = newColor.a
+	if newColor == nil then
+		
+		function pixFunc(x,y,r,g,b,a)
+		
+			pixelLen = math.sqrt( (r * r) + (g * g) + (g * g) )
+
+			luminance = (pixelLen / 255) * 0.9
+			
+			if luminance < 0 then luminance = 0 end
+			if luminance > 1 then luminance = 1 end
+			
+			r = oldColor.r * luminance
+			g = oldColor.g * luminance
+			b = oldColor.b * luminance
+			
+			return r, g, b, a
+			
 		end
 		
-		return r,g,b,a
-	
+		imgData:mapPixel(pixFunc)
+		
+	else
+		
+		function pixFunc(x,y,r,g,b,a)
+		
+			if (r == oldColor.r) and
+			   (g == oldColor.g) and
+			   (b == oldColor.b) and
+			   (a == oldColor.a) then
+					r = newColor.r
+					g = newColor.g
+					b = newColor.b
+					a = newColor.a
+			end
+			
+			return r,g,b,a
+		
+		end
+		
+		imgData:mapPixel(pixFunc)
 	end
-	
-	imgData:mapPixel(pixFunc)
 	
 	self.img:refresh()
 	
@@ -192,7 +216,7 @@ function entity:draw(physAdjust)
 		end
 		--love.graphics.draw(self.img, self.pos.x, self.pos.y, math.rad(self.angle),self.scale,self.scale,self.cRadius * self.scale, self.cRadius * self.scale)
 		--love.graphics.draw(self.img, self.pos.x, self.pos.y, math.rad(self.angle),self.scale,self.scale,(self.anims[self.curAnim].fSize.x  ) * 0.5, (self.anims[self.curAnim].fSize.y ) * 0.5)
-		love.graphics.draw(self.img, -viewInfo.pos.x() + (self.lastPos.x * physAdjust) + (self.pos.x * (1 - physAdjust)), -viewInfo.pos.y() + (self.lastPos.y * physAdjust) + (self.pos.y * (1 - physAdjust)), math.rad((self.lastAngle * physAdjust) + (self.angle * (1 - physAdjust))),self.scale,self.scale,(self.anims[self.curAnim].fSize.x  ) * 0.5, (self.anims[self.curAnim].fSize.y ) * 0.5)
+		love.graphics.draw(self.img, (self.lastPos.x * physAdjust) + (self.pos.x * (1 - physAdjust)), (self.lastPos.y * physAdjust) + (self.pos.y * (1 - physAdjust)), math.rad((self.lastAngle * physAdjust) + (self.angle * (1 - physAdjust))),self.scale,self.scale,(self.anims[self.curAnim].fSize.x  ) * 0.5, (self.anims[self.curAnim].fSize.y ) * 0.5)
 	end
 	
 

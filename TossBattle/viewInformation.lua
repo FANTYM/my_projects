@@ -14,8 +14,8 @@ function viewInformation.new(pos, gameSize, screenSize, zoom)
 	vi.screenSize = screenSize
 	vi.viewSize = vi.screenSize * vi.zoom
 	
-	vi.pos.x = tweenVal(pos.x, pos.x, 0, 0, pos.x + vi.viewSize.x)
-	vi.pos.y = tweenVal(pos.y, pos.y, 0, 0, pos.y + vi.viewSize.y)
+	vi.pos.x = tweenVal(pos.x, pos.x, 0, 0, gameSize.x - vi.viewSize.x)
+	vi.pos.y = tweenVal(pos.y, pos.y, 0, 0, gameSize.y - vi.viewSize.y)
 	
 	return vi
 
@@ -23,8 +23,8 @@ end
 
 function viewInformation:setPos(nPos)
 
-	self.pos.x(self.pos.x(), nPos.x, 1, 0, vi.pos.x() + vi.viewSize.x)
-	self.pos.y(self.pos.y(), nPos.y, 1, 0, vi.pos.y() + vi.viewSize.y)
+	self.pos.x(self.pos.x(), nPos.x, 1, 0, gameSize.x - vi.viewSize.x)
+	self.pos.y(self.pos.y(), nPos.y, 1, 0, gameSize.y - vi.viewSize.y)
 
 end
 

@@ -213,7 +213,7 @@ function effect:draw()
 		if self.hasAnim then
 			self:doAnim()
 		end
-		love.graphics.draw(self.img, -viewInfo.pos.x() + self.pos.x, -viewInfo.pos.y() + self.pos.y, math.rad(self.angle),self.scale,self.scale,(self.anims[self.curAnim].fSize.x  ) * 0.5, (self.anims[self.curAnim].fSize.y ) * 0.5)
+		love.graphics.draw(self.img, self.pos.x, self.pos.y, math.rad(self.angle),self.scale,self.scale,(self.anims[self.curAnim].fSize.x  ) * 0.5, (self.anims[self.curAnim].fSize.y ) * 0.5)
 	end
 	
 	if (gameTime - self.created) > self.ttl then
