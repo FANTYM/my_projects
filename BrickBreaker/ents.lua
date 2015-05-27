@@ -168,45 +168,53 @@ function ents.think(updateDelta)
 	
 	for k, ent in pairs(ents.entList) do 
 		if not (ent == nil) then
+			
 			ent.vel = ent.vel * ent.friction
 			ent:think(updateDelta)
-			
-			if ((ent.pos.x + ent.aabb.min.x) < 0) then
-				ent.vel.x = -ent.vel.x
-				ent:setPos(ent.pos + point(-(ent.pos.x + ent.aabb.min.x), 0) ) 
-			end
-			
-			if ((ent.pos.x + ent.aabb.max.x) > screenSize.x) then
-				ent.vel.x = -ent.vel.x
-				ent:setPos(ent.pos + point(screenSize.x - (ent.pos.x + ent.aabb.max.x), 0) )
-			end
-			
-			if ((ent.pos.y + ent.aabb.min.y) < 0) then
-				ent.vel.y = -ent.vel.y
-				ent:setPos(ent.pos + point(0,-(ent.pos.y + ent.aabb.min.y)) ) 
-			end
-			
-			if ((ent.pos.y + ent.aabb.max.y) > screenSize.y) then
-				ent.vel.y = -ent.vel.y
-				ent:setPos(ent.pos + point(0,screenSize.y - (ent.pos.y + ent.aabb.max.y)) )
-			end
 			
 			local closeEnts = cellSystem.getCellContents(ent.pos, 2)
 			
 			for meh, checkEnt in pairs(closeEnts) do
 				
 				if not (ent == checkEnt) then
-					--if not ent:separateAxisTest(checkEnt) then
-						--print("test collide")
-						if ent:checkAABBCollison(checkEnt) or checkEnt:checkAABBCollison(ent) then
-							print("collision--------------------------------------------->")
-							--ents.resolveCollision(ent, checkEnt, updateDelta)
-							
-						end
-					--end
+					aabbColTest = checkEnt:checkAABBCollison(ent)
+					if  aabbColTest.hit then
+						print("collision--------------------------------------------->")
+						print("colNorm = " .. tostring(aabbColTest.normal)) 
+						ent.vel = ent.vel + (ent.vel:length() * (aabbColTest.normal))
+						checkEnt.vel = checkEnt.vel + (checkEnt.vel:length() * -(aabbColTest.normal))
+						ent:collide({colEnt = checkEnt, normal = aabbColTest.normal})
+						checkEnt:collide({colEnt = ent, normal = -aabbColTest.normal})
+					end
+
 				end
 				
 			end
+			
+			if ((ent.pos.x + ent.aabb.min.x) <= 0) then
+				ent.vel.x = -ent.vel.x
+				ent:setPos(ent.pos + point(-(ent.pos.x + ent.aabb.min.x), 0) ) 
+				ent:collide({colEnt = nil, normal = point(1,0)})
+			end
+			
+			if ((ent.pos.x + ent.aabb.max.x) >= screenSize.x) then
+				ent.vel.x = -ent.vel.x
+				ent:setPos(ent.pos + point(screenSize.x - (ent.pos.x + ent.aabb.max.x), 0) )
+				ent:collide({colEnt = nil, normal = point(-1,0)})
+			end
+			
+			if ((ent.pos.y + ent.aabb.min.y) <= 0) then
+				ent.vel.y = -ent.vel.y
+				ent:setPos(ent.pos + point(0,-(ent.pos.y + ent.aabb.min.y)) ) 
+				ent:collide({colEnt = nil, normal = point(0,1)})
+			end
+			
+			if ((ent.pos.y + ent.aabb.max.y) >= screenSize.y) then
+				ent.vel.y = -ent.vel.y
+				ent:setPos(ent.pos + point(0,screenSize.y - (ent.pos.y + ent.aabb.max.y)) )
+				ent:collide({colEnt = nil, normal = point(0,-1)})
+			end
+
 			
 		end
 	

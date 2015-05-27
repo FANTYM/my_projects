@@ -99,12 +99,22 @@ player = ents.newEntity("player", point(screenSize.x * 0.5,screenSize.y - 64), p
 player.color = colorPool[math.ceil(math.random() * #colorPool)]
 player:reColor(player.color)	   
 --player.mass = 500
-player.friction = 0.8
+player.friction = 0.95
 
-ball = ents.newEntity("ball", point(screenSize.x * 0.5,screenSize.y * 0.5),  point(-100 + (math.random() * 200), -100 + (math.random() * 200)),  theBall, nil, thinkFunction, collideFunction)
+ball = ents.newEntity("ball", point(screenSize.x * 0.5,screenSize.y * 0.5),  point(15,180),  theBall, nil, thinkFunction, 
+	function(self, colInfo)
+		if colInfo.colEnt == nil then
+			if colInfo.normal == point(0,-1) then
+				print("ball lost")
+				self:setPos(point(screenSize.x * 0.5,screenSize.y * 0.5))
+				self.vel = self.vel:rotate(math.ceil(math.random() * 360), self.pos)
+			end
+		end
+				
+	end)
 ball.color = colorPool[math.ceil(math.random() * #colorPool)]
 ball:reColor(ball.color)	
-ball.friction = 1
+ball.friction = 1.001
 --ball.mass = 25
 
 
@@ -122,8 +132,8 @@ function love.load()
 	-- move paddle left
 	keys.registerEvent("left", function()
 		if gameStates.curState == gameStates.PLAY then
-			moveRate = (moveRate + 10)
-			player.vel = player.vel - point(moveRate, 0)
+			moveRate = (moveRate + 50)
+			player.vel = player.vel - point(player.anims[0].fSize.x * 2, 0)
 		end
 	end)
 	keys.setKeyRate("left", 0.01)
@@ -131,8 +141,8 @@ function love.load()
 	-- move paddle right
 	keys.registerEvent("right", function()
 		if gameStates.curState == gameStates.PLAY then
-			moveRate = (moveRate + 10)
-			player.vel = player.vel + point(moveRate, 0)
+			moveRate = (moveRate + 50)
+			player.vel = player.vel + point(player.anims[0].fSize.x * 2, 0)
 		end
 	end)
 	keys.setKeyRate("right", 0.01)

@@ -226,6 +226,13 @@ function entity:draw(physAdjust)
 		--love.graphics.draw(self.img, self.pos.x, self.pos.y, math.rad(self.angle),self.scale,self.scale,self.cRadius * self.scale, self.cRadius * self.scale)
 		--love.graphics.draw(self.img, self.pos.x, self.pos.y, math.rad(self.angle),self.scale,self.scale,(self.anims[self.curAnim].fSize.x  ) * 0.5, (self.anims[self.curAnim].fSize.y ) * 0.5)
 		love.graphics.draw(self.img, (self.lastPos.x * physAdjust) + (self.pos.x * (1 - physAdjust)), (self.lastPos.y * physAdjust) + (self.pos.y * (1 - physAdjust)), math.rad((self.lastAngle * physAdjust) + (self.angle * (1 - physAdjust))),self.scale,self.scale,(self.anims[self.curAnim].fSize.x  ) * 0.5, (self.anims[self.curAnim].fSize.y ) * 0.5)
+		love.graphics.setColor(255,0,0,255)
+		love.graphics.line(self.lastPos.x, self.lastPos.y, self.pos.x,self.pos.y)
+		
+		love.graphics.setColor(0,255,0,255)
+		love.graphics.line(self.pos.x, self.pos.y, self.pos.x + self.vel.x,self.pos.y + self.vel.y)
+		
+		love.graphics.setColor(255,255,255,255)
 	end
 	
 
@@ -246,27 +253,22 @@ end
 
 function entity:checkAABBCollison(checkEnt)
 	
+	selfPoints = { self.pos + point(self.aabb.min.x,0), 
+				   self.pos + point(self.aabb.max.x,0), 
+				   self.pos + point(0,self.aabb.min.y), 
+				   self.pos + point(0,self.aabb.max.y),
+				   self.pos + self.aabb.min,
+				   self.pos + self.aabb.max,
+				   self.pos + point(self.aabb.min.x, self.aabb.max.y),
+				   self.pos + point(self.aabb.max.x, self.aabb.min.y) }
 	
-	selfMinPoint = self.pos + self.aabb.min
-	selfMaxPoint = self.pos + self.aabb.max
-	
-	if checkEnt:pointInAABB(selfMinPoint) then
-		return true
+	for k,p in pairs(selfPoints) do
+		if checkEnt:pointInAABB(p) then
+			return {hit=true, normal = -(self.pos - p):getNormal()}
+		end
 	end
 	
-	if checkEnt:pointInAABB(selfMaxPoint) then
-		return true
-	end
-	
-	if checkEnt:pointInAABB(point(selfMinPoint.x, selfMaxPoint.y)) then
-		return true
-	end
-	
-	if checkEnt:pointInAABB(point(selfMaxPoint.x, selfMinPoint.y)) then
-		return true
-	end
-	
-	return false
+	return {hit=false, normal = point(0,0) }
 	
 end
 
