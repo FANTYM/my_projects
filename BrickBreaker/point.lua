@@ -46,6 +46,8 @@ end
 
 function point:__mul(p2)
 	
+	if p2 == nil then return self end 
+	
 	if type(p2) == "table" then
 		if type(self) == "table" then
 			return point(self.x * p2.x, self.y * p2.y)

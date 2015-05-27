@@ -1,6 +1,8 @@
 gameTime = 0
 require "point"
 gravity = point(0,0)
+require "cells"
+cellSystem.size = point(128,128)
 require "entity"
 require "ents"
 require "Color"
@@ -9,6 +11,8 @@ require "Flash"
 require "tweenVal"
 require "effect"
 require "keys"
+
+timeScale = 1
 
 math.randomseed(os.time())
 
@@ -26,7 +30,7 @@ avgFPS = 0
 curPly = 1
 doDrop = false
  
-physFPS = 30
+physFPS = 60
 physFPSStep = 1 / physFPS
 physAccum = 0
 physMax = 1 ---physFPSStep * 5
@@ -86,13 +90,23 @@ colorPool = { Color(255,255,255,255),
 			  Color(176,196,222,255)
             }
 
-player = ents.newEntity("player", point(0,screenSize.y - 64), point(0,0),  playerPaddle, nil, thinkFunction, collideFunction)
+
+			
+player = ents.newEntity("player", point(screenSize.x * 0.5,screenSize.y - 64), point(0,0),  playerPaddle, nil, 
+	function(self,dTime)
+		self.vel = self.vel + (((point(0, screenSize.y - 64) - self.pos) * point(0,1)) * dTime)
+	end, collideFunction)
 player.color = colorPool[math.ceil(math.random() * #colorPool)]
 player:reColor(player.color)	   
+--player.mass = 500
+player.friction = 0.8
 
-ball = ents.newEntity("ball", point(0,screenSize.y * 0.5), point(0,0),  theBall, nil, thinkFunction, collideFunction)
+ball = ents.newEntity("ball", point(screenSize.x * 0.5,screenSize.y * 0.5),  point(-100 + (math.random() * 200), -100 + (math.random() * 200)),  theBall, nil, thinkFunction, collideFunction)
 ball.color = colorPool[math.ceil(math.random() * #colorPool)]
-ball:reColor(ball.color)	   
+ball:reColor(ball.color)	
+ball.friction = 1
+--ball.mass = 25
+
 
 function love.load()
 
@@ -108,7 +122,7 @@ function love.load()
 	-- move paddle left
 	keys.registerEvent("left", function()
 		if gameStates.curState == gameStates.PLAY then
-			moveRate = (moveRate + 3)
+			moveRate = (moveRate + 10)
 			player.vel = player.vel - point(moveRate, 0)
 		end
 	end)
@@ -117,7 +131,7 @@ function love.load()
 	-- move paddle right
 	keys.registerEvent("right", function()
 		if gameStates.curState == gameStates.PLAY then
-			moveRate = (moveRate + 3)
+			moveRate = (moveRate + 10)
 			player.vel = player.vel + point(moveRate, 0)
 		end
 	end)
@@ -140,8 +154,15 @@ function love.load()
 		
 		print("**************** Debug Print *************************")
 		print("")
+		print("timeScale: " .. tostring(timeScale))
+		print("")
 		print("******************************************************")
 	end)
+	
+	keys.registerEvent("kp-", function() timeScale = timeScale * 0.5 end)
+	keys.setKeyRate("kp-", 0.01)
+	keys.registerEvent("kp+", function() timeScale = timeScale * 1.5 end)
+	keys.setKeyRate("kp+", 0.01)
 	
 	love.keyboard.setKeyRepeat( true )
 	
@@ -161,7 +182,7 @@ function love.update(loveDelta)
 	local updateDelta = curTime - updateTimer
 	local mouseDelta = gameTime - mouseTimer
 
-	physAccum = physAccum + updateDelta
+	physAccum = physAccum + (updateDelta * timeScale)
 
 	if physAccum > physMax then physAccum = physMax end
 	

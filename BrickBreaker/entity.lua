@@ -37,7 +37,8 @@ end
 function entity:getPenDist(ent2)
 
 	local dist = self.pos:dist(ent2.pos)
-	return dist - (self.cRadius * ent2.cRadius)
+	
+	return dist 
 
 end
 
@@ -49,8 +50,10 @@ function entity.new(entName, position, velocity, dispImage, animInfo, thinkFunct
 	newEnt.gravity = gravity
 	newEnt.pThink = thinkFunction
 	newEnt.pCollide = collideFunction
+	--newEnt:setPos(position)
 	newEnt.pos = position
 	newEnt.lastPos = newEnt.pos
+	
 	newEnt.vel = velocity
 	newEnt.img = dispImage
 	newEnt.imgData = newEnt.img:getData()
@@ -102,30 +105,36 @@ function entity.new(entName, position, velocity, dispImage, animInfo, thinkFunct
 	newEnt.deadTimer = gameTime
 	newEnt.visible = true
 	newEnt.attachedEnts = {}
-	newEnt.aabb = { min = point(-(newEnt.anims[0].fSize.y * 0.5), -(newEnt.anims[0].fSize.x * 0.5)) , max = point(newEnt.anims[0].fSize.y * 0.5 , newEnt.anims[0].fSize.x * 0.5) }
-
+	newEnt.aabb = { min = point(-(newEnt.anims[0].fSize.x * 0.5), -(newEnt.anims[0].fSize.y * 0.5)) , max = point(newEnt.anims[0].fSize.x * 0.5 , newEnt.anims[0].fSize.y * 0.5) }
+	newEnt.cRadius = (newEnt.anims[0].fSize.x + newEnt.anims[0].fSize.y) * 0.5 
+	
+	cellSystem.putInCell(newEnt)
+	
+	
 	return newEnt
 
 end
 
 function entity:separateAxisTest(ent2)
 	
-	if (self.aabb.max.x < ent2.aabb.min.x) or (self.aabb.min.x > ent2.aabb.max.x) then
-		return false
+	if ((self.pos.x + self.aabb.max.x) < (ent2.pos.x + ent2.aabb.min.x)) or ((self.pos.x + self.aabb.min.x) > (ent2.pos.x + ent2.aabb.max.x)) then
+		return true
 	end
 	
-	if (self.aabb.max.y < ent2.aabb.min.y) or (self.aabb.min.y > ent2.aabb.max.y) then
-		return false
+	if ((self.pos.y + self.aabb.max.y) < (ent2.pos.y + ent2.aabb.min.y)) or ((self.pos.y + self.aabb.min.y) > (ent2.pos.y + ent2.aabb.max.y)) then
+		return true
 	end
  
-	return true
+	return false
 
 end
 
 function entity:setPos(newPos)
 	
 	self.lastPos = self.pos
+	cellSystem.removeFromCell(self)
 	self.pos = newPos
+	cellSystem.putInCell(self)
 	
 end
 
@@ -188,9 +197,9 @@ end
 
 function entity:think(thinkDelta)
 
-	self.lastPos = self.pos
+	--self.lastPos = self.pos
 	self.vel = self.vel + (self.gravity * thinkDelta)
-	self.pos = self.pos + (self.vel * thinkDelta)
+	self:setPos(self.pos + (self.vel * thinkDelta))
 	
 	if self.pThink then
 		self:pThink()
@@ -220,6 +229,45 @@ function entity:draw(physAdjust)
 	end
 	
 
+end
+
+function entity:pointInAABB(where)
+	
+	if (where.x >= (self.pos.x + self.aabb.min.x)) and
+	   (where.x <= (self.pos.x + self.aabb.max.x)) and
+	   (where.y >= (self.pos.y + self.aabb.min.y)) and
+	   (where.y <= (self.pos.y + self.aabb.max.y)) then
+			return true
+	end
+	
+	return false
+	
+end
+
+function entity:checkAABBCollison(checkEnt)
+	
+	
+	selfMinPoint = self.pos + self.aabb.min
+	selfMaxPoint = self.pos + self.aabb.max
+	
+	if checkEnt:pointInAABB(selfMinPoint) then
+		return true
+	end
+	
+	if checkEnt:pointInAABB(selfMaxPoint) then
+		return true
+	end
+	
+	if checkEnt:pointInAABB(point(selfMinPoint.x, selfMaxPoint.y)) then
+		return true
+	end
+	
+	if checkEnt:pointInAABB(point(selfMaxPoint.x, selfMinPoint.y)) then
+		return true
+	end
+	
+	return false
+	
 end
 
 function entity:doAnim()
