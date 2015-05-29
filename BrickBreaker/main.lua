@@ -14,6 +14,7 @@ require "keys"
 
 timeScale = 1
 
+
 math.randomseed(os.time())
 
 titleFont = love.graphics.newFont("differentiator.ttf", 20)
@@ -42,7 +43,7 @@ lastScreenUpdate = gameTime
 
 textCycler = Cycler.new(0.01, 0, 0, 1, true, true)
 
-gameStates = { MENU = 0 , PLAY = 1, SCORE = 2, curState = 0 }
+gameStates = { MENU = 0 , PLAY = 1, SCORE = 2, PAUSE = 420, curState = 0 }
 
 screenSize = point(love.graphics.getWidth(), love.graphics.getHeight())
 
@@ -90,32 +91,58 @@ colorPool = { Color(255,255,255,255),
 			  Color(176,196,222,255)
             }
 
+function copyImg(srcImage)
+
+	newImg = love.graphics.newImage(love.image.newImageData(srcImage:getWidth(), srcImage:getHeight()))
+	
+	newImg:getData():paste(srcImage:getData(), 0,0)
+	
+	return newImg
+
+end 
 
 			
 player = ents.newEntity("player", point(screenSize.x * 0.5,screenSize.y - 64), point(0,0),  playerPaddle, nil, 
 	function(self,dTime)
 		self.vel = self.vel + (((point(0, screenSize.y - 64) - self.pos) * point(0,1)) * dTime)
-	end, collideFunction)
+	end, 
+	function (self, colInfo)
+		if colInfo.colEnt then
+			
+			if colInfo.colEnt.name == "ball" then
+				colInfo.colEnt.vel = colInfo.colEnt.vel * 1.1
+			end
+			
+		end
+	end)
 player.color = colorPool[math.ceil(math.random() * #colorPool)]
 player:reColor(player.color)	   
 --player.mass = 500
-player.friction = 0.95
+player.friction = 0.9
 
-ball = ents.newEntity("ball", point(screenSize.x * 0.5,screenSize.y * 0.5),  point(15,180),  theBall, nil, thinkFunction, 
+ball = ents.newEntity("ball", point(screenSize.x * 0.5,screenSize.y * 0.75),  point(-20 + (math.ceil(math.random() * 40)),180),  copyImg(theBall), nil, thinkFunction, 
 	function(self, colInfo)
 		if colInfo.colEnt == nil then
 			if colInfo.normal == point(0,-1) then
 				print("ball lost")
-				self:setPos(point(screenSize.x * 0.5,screenSize.y * 0.5))
-				self.vel = self.vel:rotate(math.ceil(math.random() * 360), self.pos)
+				self:setPos(point(screenSize.x * 0.5,screenSize.y * 0.75))
+				self:setPos(point(screenSize.x * 0.5,screenSize.y * 0.75))
+				self.vel = point(-20 + (math.ceil(math.random() * 40)),180)
+				player:setPos(point(screenSize.x * 0.5,screenSize.y - 64))
+				player.vel = point(0,0)
 			end
 		end
+		self.img = copyImg(theBall)
+		self.color = colorPool[math.ceil(math.random() * #colorPool)]
+		self:reColor(self.color)	
 				
 	end)
 ball.color = colorPool[math.ceil(math.random() * #colorPool)]
 ball:reColor(ball.color)	
 ball.friction = 1.001
 --ball.mass = 25
+
+bricks = {}
 
 
 function love.load()
@@ -151,9 +178,68 @@ function love.load()
 		os.exit() 
 	end)
 	
+	keys.registerEvent("tab", function() 
+		print("tab")
+		print("gameStates.curState: " .. gameStates.curState)
+		if not (gameStates.curState == gameStates.PAUSE) then
+			print("Paused")
+			gameStates.lastState = gameStates.curState
+			gameStates.curState = gameStates.PAUSE
+		else
+			gameStates.curState = gameStates.lastState
+			print("Unpaused")
+		end
+		
+	end)
+	keys.setKeyRate("tab", -1.00)
+	
 	keys.registerEvent("return", function()
 		if gameStates.curState == gameStates.MENU then
 			gameStates.curState = gameStates.PLAY
+			local x = 0
+			local y = 0
+			
+			for i = 0,254 do
+				
+				bricks[i] = ents.newEntity("brick", point(3 + (x * baseBrick:getWidth()) + (baseBrick:getWidth() * 0.5) + (3 * x),(3 * y) + (baseBrick:getHeight() * 0.5) + ( y * baseBrick:getHeight())),  point(0,0),  copyImg(baseBrick), nil,
+						function(self,dTime)
+							self.vel = point(0,0) -- self.vel + ((self.lastPos - self.pos) * dTime)
+						end, 
+						function(self, colInfo)
+							
+							if colInfo.colEnt then
+								if colInfo.colEnt.name == "ball" then
+									local thisEff = effect.new("blast", colInfo.colPos, colInfo.normal, hitBlast, -1, {name = "", fCount = point(5,2), fps = 80, loop = false})
+									thisEff.scale = 0.25
+									if self.hitCount == nil then
+										self.hitCount = 1
+									else
+										self.hitCount = self.hitCount + 1
+									end
+									
+									if self.hitCount > 3 then
+										cellSystem.removeFromCell(self)
+										ents.entList[self.id] = nil
+										self = nil
+										return
+									end
+									self.img = copyImg(baseBrick)
+									self.color = colorPool[math.ceil(math.random() * #colorPool)]
+									self:reColor(self.color)	
+									colInfo.colEnt.vel = colInfo.colEnt.vel * 1.75
+								end
+							end
+									
+						end)
+				bricks[i].color = colorPool[math.ceil(math.random() * #colorPool)]
+				bricks[i]:reColor(bricks[i].color)
+				x = x + 1
+				if x > math.floor(screenSize.x / (baseBrick:getWidth() + 4) ) then
+					x = 0
+					y = y + 1
+				end
+			
+			end
 		elseif gameStates.curState == gameStates.SCORES then
 			gameStates.curState = gameStates.MENU
 		end
@@ -192,20 +278,27 @@ function love.update(loveDelta)
 	local updateDelta = curTime - updateTimer
 	local mouseDelta = gameTime - mouseTimer
 
-	physAccum = physAccum + (updateDelta * timeScale)
-
-	if physAccum > physMax then physAccum = physMax end
+	if not (gameStates.curState == gameStates.PAUSE) then
 	
-	while physAccum >= physFPSStep do
+		physAccum = physAccum + (updateDelta * timeScale)
 
-		gameTime = gameTime + physFPSStep
-		effect.thinkEffects(physFPSStep)
-		Cycler.runCycles(physFPSStep)
-		ents.think(physFPSStep)
-		physAccum = physAccum - physFPSStep
-		physAlpha = physAccum / physFPSStep
-		didPhys = true
+		if physAccum > physMax then physAccum = physMax end
 		
+		while physAccum >= physFPSStep do
+			
+			gameTime = gameTime + physFPSStep	
+			
+			effect.thinkEffects(physFPSStep)
+			Cycler.runCycles(physFPSStep)
+			if gameStates.curState == gameStates.PLAY then
+				ents.think(physFPSStep)
+			end
+			physAccum = physAccum - physFPSStep
+			physAlpha = physAccum / physFPSStep
+			didPhys = true
+		end
+	else
+		updateTimer = love.timer.getTime()			
 	end
 	
 	if didPhys then
@@ -347,13 +440,4 @@ function clamp(inNum, minNum, maxNum)
 	
 end
 
-function copyImg(srcImg)
-
-	newImg = love.graphics.newImage(love.image.newImageData(srcImage:getWidth(), srcImage:getHeight()))
-	
-	newImg:getData():paste(srcImage:getData(), 0,0)
-	
-	return newImg
-
-end 
 

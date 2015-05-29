@@ -1,6 +1,5 @@
 point = {}
 point.mt = {}
-
 point.__index = point
 
 function point.mt:__call( nPx, nPy ) 
@@ -143,3 +142,4 @@ end
 
 setmetatable(point, point.mt)
 
+point.zero = point(0,0)

@@ -1,4 +1,5 @@
 require "point"
+require "aabb"
 
 entity = {}
 entity.__index = entity
@@ -105,7 +106,7 @@ function entity.new(entName, position, velocity, dispImage, animInfo, thinkFunct
 	newEnt.deadTimer = gameTime
 	newEnt.visible = true
 	newEnt.attachedEnts = {}
-	newEnt.aabb = { min = point(-(newEnt.anims[0].fSize.x * 0.5), -(newEnt.anims[0].fSize.y * 0.5)) , max = point(newEnt.anims[0].fSize.x * 0.5 , newEnt.anims[0].fSize.y * 0.5) }
+	newEnt.aabb = AABB.new(newEnt.pos, newEnt.anims[0].fSize.x, newEnt.anims[0].fSize.y)
 	newEnt.cRadius = (newEnt.anims[0].fSize.x + newEnt.anims[0].fSize.y) * 0.5 
 	
 	cellSystem.putInCell(newEnt)
@@ -117,11 +118,11 @@ end
 
 function entity:separateAxisTest(ent2)
 	
-	if ((self.pos.x + self.aabb.max.x) < (ent2.pos.x + ent2.aabb.min.x)) or ((self.pos.x + self.aabb.min.x) > (ent2.pos.x + ent2.aabb.max.x)) then
+	if (self.aabb.max.x < ent2.aabb.min.x) or (self.aabb.min.x > ent2.aabb.max.x) then
 		return true
 	end
 	
-	if ((self.pos.y + self.aabb.max.y) < (ent2.pos.y + ent2.aabb.min.y)) or ((self.pos.y + self.aabb.min.y) > (ent2.pos.y + ent2.aabb.max.y)) then
+	if (self.aabb.max.y < ent2.aabb.min.y) or (self.aabb.min.y > ent2.aabb.max.y) then
 		return true
 	end
  
@@ -134,6 +135,7 @@ function entity:setPos(newPos)
 	self.lastPos = self.pos
 	cellSystem.removeFromCell(self)
 	self.pos = newPos
+	self.aabb:setPos(newPos)
 	cellSystem.putInCell(self)
 	
 end
@@ -238,37 +240,44 @@ function entity:draw(physAdjust)
 
 end
 
-function entity:pointInAABB(where)
+function entity:checkAABBCollison(checkEnt, deltaTime)
 	
-	if (where.x >= (self.pos.x + self.aabb.min.x)) and
-	   (where.x <= (self.pos.x + self.aabb.max.x)) and
-	   (where.y >= (self.pos.y + self.aabb.min.y)) and
-	   (where.y <= (self.pos.y + self.aabb.max.y)) then
-			return true
+	-- using Minkowski 
+	relVel = (checkEnt.vel - self.vel) * deltaTime
+	relLen = relVel:length()
+	minDiff = self.aabb:minkowskiDiff(checkEnt.aabb)
+	--[[{ min = point((self.pos.x + self.aabb.min.x) - (checkEnt.pos.x + checkEnt.aabb.max.x), (self.pos.y + self.aabb.min.y) - (checkEnt.pos.y + checkEnt.aabb.max.y)),
+				max = point((math.abs(self.aabb.min.x) + self.aabb.max.x) + (math.abs(checkEnt.aabb.min.x) + checkEnt.aabb.max.x), (math.abs(self.aabb.min.y) + self.aabb.max.y) + (math.abs(checkEnt.aabb.min.y) + checkEnt.aabb.max.y))}
+	]]--
+	
+	--[[if ( minDiff.min.x <= 0) and
+	   ( minDiff.max.x >= 0) and
+	   ( minDiff.min.y <= 0) and
+       ( minDiff.max.y >= 0) then]]--
+	if minDiff:pointInside(point.zero) then
+			--checkEnt:setPos(self.pos + minDiff:closePointOnBounds(point.zero))
+			print("minkow hit")
+			return {hit=true, normal = point(0,0), colPos = point(0,0)}
+	else
+		return {hit=false, normal = point(0,0), colPos = self.pos}
 	end
 	
-	return false
 	
-end
-
-function entity:checkAABBCollison(checkEnt)
 	
-	selfPoints = { self.pos + point(self.aabb.min.x,0), 
-				   self.pos + point(self.aabb.max.x,0), 
-				   self.pos + point(0,self.aabb.min.y), 
-				   self.pos + point(0,self.aabb.max.y),
-				   self.pos + self.aabb.min,
-				   self.pos + self.aabb.max,
-				   self.pos + point(self.aabb.min.x, self.aabb.max.y),
-				   self.pos + point(self.aabb.max.x, self.aabb.min.y) }
+	selfPoints = { point(self.aabb.min.x, self.aabb.min.y ),
+				   point(self.aabb.max.x, self.aabb.max.y ),
+				   point(self.aabb.min.x, self.aabb.max.y ),
+				   point(self.aabb.max.x, self.aabb.min.y ) }
+				   
+	
 	
 	for k,p in pairs(selfPoints) do
-		if checkEnt:pointInAABB(p) then
-			return {hit=true, normal = -(self.pos - p):getNormal()}
+		if checkEnt.aabb:pointInside(p) then
+			return {hit=true, normal = -(self.pos - p):getNormal(), colPos = p}
 		end
 	end
 	
-	return {hit=false, normal = point(0,0) }
+	return {hit=false, normal = point(0,0), colPos = self.pos}
 	
 end
 
