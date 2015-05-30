@@ -106,7 +106,7 @@ function entity.new(entName, position, velocity, dispImage, animInfo, thinkFunct
 	newEnt.deadTimer = gameTime
 	newEnt.visible = true
 	newEnt.attachedEnts = {}
-	newEnt.aabb = AABB.new(newEnt.pos, newEnt.anims[0].fSize.x, newEnt.anims[0].fSize.y)
+	newEnt.aabb = AABB.new(newEnt.pos, newEnt.anims[0].fSize)
 	newEnt.cRadius = (newEnt.anims[0].fSize.x + newEnt.anims[0].fSize.y) * 0.5 
 	
 	cellSystem.putInCell(newEnt)
@@ -135,7 +135,7 @@ function entity:setPos(newPos)
 	self.lastPos = self.pos
 	cellSystem.removeFromCell(self)
 	self.pos = newPos
-	self.aabb:setPos(newPos)
+	self.aabb.pos = newPos
 	cellSystem.putInCell(self)
 	
 end
@@ -233,8 +233,14 @@ function entity:draw(physAdjust)
 		
 		love.graphics.setColor(0,255,0,255)
 		love.graphics.line(self.pos.x, self.pos.y, self.pos.x + self.vel.x,self.pos.y + self.vel.y)
+
+		love.graphics.setColor(255,255,255,128)
+		if self.lastMink then
+			love.graphics.rectangle("fill", self.lastMink.pos.x, self.lastMink.pos.y, self.lastMink.size.x, self.lastMink.size.y)
+		end
 		
 		love.graphics.setColor(255,255,255,255)
+		
 	end
 	
 
@@ -244,41 +250,27 @@ function entity:checkAABBCollison(checkEnt, deltaTime)
 	
 	-- using Minkowski 
 	relVel = (checkEnt.vel - self.vel) * deltaTime
-	relLen = relVel:length()
-	minDiff = self.aabb:minkowskiDiff(checkEnt.aabb)
-	--[[{ min = point((self.pos.x + self.aabb.min.x) - (checkEnt.pos.x + checkEnt.aabb.max.x), (self.pos.y + self.aabb.min.y) - (checkEnt.pos.y + checkEnt.aabb.max.y)),
-				max = point((math.abs(self.aabb.min.x) + self.aabb.max.x) + (math.abs(checkEnt.aabb.min.x) + checkEnt.aabb.max.x), (math.abs(self.aabb.min.y) + self.aabb.max.y) + (math.abs(checkEnt.aabb.min.y) + checkEnt.aabb.max.y))}
-	]]--
+	--relLen = relVel:length()
 	
-	--[[if ( minDiff.min.x <= 0) and
-	   ( minDiff.max.x >= 0) and
-	   ( minDiff.min.y <= 0) and
-       ( minDiff.max.y >= 0) then]]--
-	if minDiff:pointInside(point.zero) then
-			--checkEnt:setPos(self.pos + minDiff:closePointOnBounds(point.zero))
-			print("minkow hit")
-			return {hit=true, normal = point(0,0), colPos = point(0,0)}
+	minDiff = self.aabb:minkowskiDiff(checkEnt.aabb)
+	minDiff.pos = minDiff.pos + relVel
+	self.lastMink = minDiff
+	
+	--if minDiff:pointInside(point.zero) then
+	local minMin = minDiff:getMin()
+	local minMax = minDiff:getMax()
+	if (minMin.x <= 0) and
+	   (minMax.x >= 0) and
+	   (minMin.y <= 0) and
+	   (minMax.y >= 0) then
+		print("minkow hit")
+		local penVec = minDiff:closePointOnBounds(point.zero)
+		checkEnt:setPos(checkEnt.pos + penVec)
+		return {hit=true, normal = point(0,0), colPos = self.pos}
 	else
 		return {hit=false, normal = point(0,0), colPos = self.pos}
 	end
-	
-	
-	
-	selfPoints = { point(self.aabb.min.x, self.aabb.min.y ),
-				   point(self.aabb.max.x, self.aabb.max.y ),
-				   point(self.aabb.min.x, self.aabb.max.y ),
-				   point(self.aabb.max.x, self.aabb.min.y ) }
-				   
-	
-	
-	for k,p in pairs(selfPoints) do
-		if checkEnt.aabb:pointInside(p) then
-			return {hit=true, normal = -(self.pos - p):getNormal(), colPos = p}
-		end
-	end
-	
-	return {hit=false, normal = point(0,0), colPos = self.pos}
-	
+		
 end
 
 function entity:doAnim()

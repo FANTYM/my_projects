@@ -1,38 +1,37 @@
 AABB = {}
 AABB.__index = AABB
-function AABB.new(pPos, pWidth, pHeight) 
+function AABB.new(pPos, pSize) 
 	
-	hWidth = pWidth / 2
-	hHeight = pHeight / 2
+	--hWidth = pWidth / 2
+	--hHeight = pHeight / 2
 	
 	newAABB = {}
 	setmetatable(newAABB, AABB)
 	newAABB.pos = pPos
-	newAABB.min = point(-(pWidth * 0.5), -(pHeight * 0.5))
-	newAABB.max = point((pWidth * 0.5), (pHeight * 0.5))
-	newAABB.size = point(pWidth, pHeight)
-	--newAABB.width = pWidth
-	--newAABB.height = pHeight
+	newAABB.min = point(-(pSize.x * 0.5), -(pSize.y * 0.5))
+	newAABB.max = point((pSize.x * 0.5), (pSize.y * 0.5))
+	newAABB.size = pSize
 	
 	return newAABB
 	
 	
 end
 
-function AABB:setPos(nPos)
-	
-	self.pos = pPos
-	self.min = point(-(self.size.x * 0.5), -(self.size.y * 0.5))
-	self.max = point((self.size.x * 0.5), (self.size.y * 0.5))
-	
+function AABB:getMin()
+	return self.pos + self.min
 end
 
+function AABB:getMax()
+	return self.pos + self.max
+end
+
+
 function AABB:minkowskiDiff(otherAABB)
+
+	local topLeft = self:getMin() - otherAABB:getMax()
+	local fullSize = (self.size + otherAABB.size ) 
 	
-	local topLeft = self.min - otherAABB.max
-	local fullSize = (self.size + otherAABB.size ) * 0.5
-	
-	return AABB.new(topLeft + fullSize, fullSize.x, fullSize.y) 
+	return AABB.new(topLeft + (fullSize * 0.5), fullSize) 
 
 end
 

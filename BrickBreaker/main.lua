@@ -110,7 +110,7 @@ player = ents.newEntity("player", point(screenSize.x * 0.5,screenSize.y - 64), p
 		if colInfo.colEnt then
 			
 			if colInfo.colEnt.name == "ball" then
-				colInfo.colEnt.vel = colInfo.colEnt.vel * 1.1
+				--colInfo.colEnt.vel = colInfo.colEnt.vel * 1.1
 			end
 			
 		end
@@ -120,17 +120,23 @@ player:reColor(player.color)
 --player.mass = 500
 player.friction = 0.9
 
-ball = ents.newEntity("ball", point(screenSize.x * 0.5,screenSize.y * 0.75),  point(-20 + (math.ceil(math.random() * 40)),180),  copyImg(theBall), nil, thinkFunction, 
+ball = ents.newEntity("ball", point(screenSize.x * 0.5,screenSize.y * 0.75),  point(-20 + (math.ceil(math.random() * 40)),20),  copyImg(theBall), nil, thinkFunction, 
 	function(self, colInfo)
 		if colInfo.colEnt == nil then
 			if colInfo.normal == point(0,-1) then
 				print("ball lost")
 				self:setPos(point(screenSize.x * 0.5,screenSize.y * 0.75))
 				self:setPos(point(screenSize.x * 0.5,screenSize.y * 0.75))
-				self.vel = point(-20 + (math.ceil(math.random() * 40)),180)
+				self.vel = point(-20 + (math.ceil(math.random() * 40)),20)
 				player:setPos(point(screenSize.x * 0.5,screenSize.y - 64))
 				player.vel = point(0,0)
 			end
+		else
+			if colInfo.colEnt.name == "player" or
+			   colInfo.colEnt.name == "brick" then
+			   self.vel.y = -self.vel.y
+			end
+			
 		end
 		self.img = copyImg(theBall)
 		self.color = colorPool[math.ceil(math.random() * #colorPool)]
@@ -139,7 +145,7 @@ ball = ents.newEntity("ball", point(screenSize.x * 0.5,screenSize.y * 0.75),  po
 	end)
 ball.color = colorPool[math.ceil(math.random() * #colorPool)]
 ball:reColor(ball.color)	
-ball.friction = 1.001
+ball.friction = 1.00
 --ball.mass = 25
 
 bricks = {}
@@ -199,7 +205,7 @@ function love.load()
 			local x = 0
 			local y = 0
 			
-			for i = 0,254 do
+			for i = 0, 9 do --254 do
 				
 				bricks[i] = ents.newEntity("brick", point(3 + (x * baseBrick:getWidth()) + (baseBrick:getWidth() * 0.5) + (3 * x),(3 * y) + (baseBrick:getHeight() * 0.5) + ( y * baseBrick:getHeight())),  point(0,0),  copyImg(baseBrick), nil,
 						function(self,dTime)
@@ -231,6 +237,7 @@ function love.load()
 							end
 									
 						end)
+				bricks[i].friction = 0
 				bricks[i].color = colorPool[math.ceil(math.random() * #colorPool)]
 				bricks[i]:reColor(bricks[i].color)
 				x = x + 1
