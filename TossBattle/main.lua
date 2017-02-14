@@ -150,7 +150,7 @@ function love.load()
 	keys.setKeyRate("kp-", 0.01)
 	
 	-- Fire!!!
-	keys.registerEvent(" ", function() 
+	keys.registerEvent("space", function() 
 		if gameStates.curState == gameStates.PLAY then
 			fireShot(players[curPly])
 		end
@@ -320,8 +320,9 @@ end
 
 function renderScreen()
 
-	screen:clear()
+	
 	love.graphics.setCanvas(screen)
+		love.graphics.clear()
 		
 		if gameStates.curState == gameStates.MENU then
 

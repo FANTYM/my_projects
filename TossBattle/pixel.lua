@@ -37,7 +37,7 @@ function pixel.drawPixels(physAlpha)
 	
 	for k, pxl in pairs(pixel.pixels) do
 		love.graphics.setColor(pxl.clr.r,pxl.clr.g,pxl.clr.b,pxl.clr.a)		
-		love.graphics.point(-viewInfo.pos.x() + ( pxl.lastPos.x * physAlpha ) + (pxl.pos.x * (1 - physAlpha)), -viewInfo.pos.y() + ( pxl.lastPos.y * physAlpha ) + (pxl.pos.y * (1 - physAlpha)))
+		love.graphics.points(-viewInfo.pos.x() + ( pxl.lastPos.x * physAlpha ) + (pxl.pos.x * (1 - physAlpha)), -viewInfo.pos.y() + ( pxl.lastPos.y * physAlpha ) + (pxl.pos.y * (1 - physAlpha)))
 	end
 	
 	love.graphics.setColor(255,255,255,255)		
