@@ -263,7 +263,7 @@ function love.update(dt)
 			
 		end
 		
-		if keys[" "] and (keyDelta >= keyRate) then
+		if keys["space"] and (keyDelta >= keyRate) then
 			curBlock.pos.y = curBlock.pos.y + 1
 			if not canPlace(curBlock) then
 				curBlock.pos.y = curBlock.pos.y - 1
