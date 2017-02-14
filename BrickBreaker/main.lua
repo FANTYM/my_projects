@@ -348,8 +348,9 @@ end
 
 function renderScreen()
 
-	screen:clear()
 	love.graphics.setCanvas(screen)
+		love.graphics.clear()
+	
 		
 		if gameStates.curState == gameStates.MENU then
 
